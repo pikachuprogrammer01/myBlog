@@ -1,0 +1,157 @@
+// 主题变量
+:root {
+  // 主色
+  --blog-primary-color: #409eff;
+  --blog-primary-light: #ecf5ff;
+  --blog-primary-dark: #337ecc;
+
+  // 辅助色
+  --blog-success-color: #67c23a;
+  --blog-warning-color: #e6a23c;
+  --blog-danger-color: #f56c6c;
+  --blog-info-color: #909399;
+
+  // 文本色
+  --blog-text-primary: #303133;
+  --blog-text-regular: #606266;
+  --blog-text-secondary: #909399;
+  --blog-text-placeholder: #c0c4cc;
+
+  // 背景色
+  --blog-bg-color: #f5f7fa;
+  --blog-bg-white: #ffffff;
+  --blog-bg-gray: #f0f2f5;
+
+  // 边框
+  --blog-border-color: #dcdfe6;
+  --blog-border-light: #e4e7ed;
+  --blog-border-lighter: #ebeef5;
+
+  // 阴影
+  --blog-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --blog-shadow-light: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+
+  // 圆角
+  --blog-border-radius: 4px;
+  --blog-border-radius-lg: 8px;
+  --blog-border-radius-sm: 2px;
+
+  // 间距
+  --blog-spacing-xs: 8px;
+  --blog-spacing-sm: 12px;
+  --blog-spacing-md: 16px;
+  --blog-spacing-lg: 24px;
+  --blog-spacing-xl: 32px;
+
+  // 布局尺寸
+  --blog-header-height: 64px;
+  --blog-container-width: 1200px;
+}
+
+// 暗黑模式变量
+@media (prefers-color-scheme: dark) {
+  :root {
+    --blog-text-primary: #e5eaf3;
+    --blog-text-regular: #cfd3dc;
+    --blog-text-secondary: #a3a6ad;
+    --blog-bg-color: #141414;
+    --blog-bg-white: #1d1e1f;
+    --blog-bg-gray: #242424;
+    --blog-border-color: #4c4d4f;
+  }
+}
+
+// 重置和基础样式
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--blog-text-primary);
+  background-color: var(--blog-bg-color);
+  min-height: 100%;
+}
+
+// 布局工具类
+.blog-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--blog-spacing-md);
+
+  @media (max-width: 768px) {
+    padding: 0 var(--blog-spacing-sm);
+  }
+}
+
+.blog-page-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: var(--blog-spacing-lg);
+  color: var(--blog-text-primary);
+  padding-bottom: var(--blog-spacing-sm);
+  border-bottom: 1px solid var(--blog-border-light);
+}
+
+.blog-card {
+  background: var(--blog-bg-white);
+  border-radius: var(--blog-border-radius-lg);
+  padding: var(--blog-spacing-lg);
+  box-shadow: var(--blog-shadow-light);
+  margin-bottom: var(--blog-spacing-md);
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--blog-shadow);
+  }
+}
+
+// 响应式断点
+$breakpoints: (
+  'sm': 640px,
+  'md': 768px,
+  'lg': 1024px,
+  'xl': 1280px
+);
+
+@mixin respond-to($breakpoint) {
+  @media (min-width: map-get($breakpoints, $breakpoint)) {
+    @content;
+  }
+}
+
+// 工具类
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mt-1 { margin-top: var(--blog-spacing-xs); }
+.mt-2 { margin-top: var(--blog-spacing-sm); }
+.mt-3 { margin-top: var(--blog-spacing-md); }
+.mt-4 { margin-top: var(--blog-spacing-lg); }
+.mt-5 { margin-top: var(--blog-spacing-xl); }
+
+.mb-1 { margin-bottom: var(--blog-spacing-xs); }
+.mb-2 { margin-bottom: var(--blog-spacing-sm); }
+.mb-3 { margin-bottom: var(--blog-spacing-md); }
+.mb-4 { margin-bottom: var(--blog-spacing-lg); }
+.mb-5 { margin-bottom: var(--blog-spacing-xl); }
+
+.p-1 { padding: var(--blog-spacing-xs); }
+.p-2 { padding: var(--blog-spacing-sm); }
+.p-3 { padding: var(--blog-spacing-md); }
+.p-4 { padding: var(--blog-spacing-lg); }
+.p-5 { padding: var(--blog-spacing-xl); }

@@ -1,0 +1,1 @@
+import{ah as n}from"./index-C6oQ0Fej.js";function A(){const t=n();return{checkAuth:()=>t.isAuthenticated,checkAdmin:()=>t.isAdmin,getCurrentUser:()=>t.user,login:async(e,r)=>t.login(e,r),register:async(e,r)=>t.register(e,r),logout:()=>{t.logout()}}}export{A as u};

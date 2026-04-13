@@ -1,0 +1,257 @@
+<template>
+  <div class="profile">
+    <h1 class="blog-page-title">
+      <el-icon><User /></el-icon>
+      用户中心
+    </h1>
+    <div class="profile-container">
+      <!-- 用户信息卡片 -->
+      <div class="blog-card user-info-card">
+        <div class="user-header">
+          <div class="user-avatar">
+            <el-avatar :size="80" :src="userAvatar" />
+          </div>
+          <div class="user-details">
+            <h2>{{ user?.username }}</h2>
+            <div class="user-meta">
+              <span class="user-role">{{ roleText }}</span>
+              <span class="user-id">ID: {{ user?.id }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="user-stats">
+          <div class="stat-item">
+            <div class="stat-icon">
+              <el-icon><ChatDotRound /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ commentStats.active || 0 }}</div>
+              <div class="stat-label">我的评论</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">
+              <el-icon><Calendar /></el-icon>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value">{{ registrationDays }}</div>
+              <div class="stat-label">注册天数</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="user-actions">
+          <el-button type="primary" @click="handleLogout">
+            退出登录
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 我的评论 -->
+      <div class="blog-card my-comments-card">
+        <h3>
+          <el-icon><ChatDotRound /></el-icon>
+          我的评论
+        </h3>
+        <div v-if="myComments.length === 0" class="empty-state">
+          <p>暂无评论</p>
+          <el-button type="primary" @click="$router.push('/')">
+            去发表评论
+          </el-button>
+        </div>
+        <div v-else>
+          <el-table :data="myComments" style="width: 100%">
+            <el-table-column prop="articleId" label="文章ID" width="100" />
+            <el-table-column prop="content" label="评论内容" />
+            <el-table-column prop="createdAt" label="评论时间" width="180">
+              <template #default="{ row }">
+                {{ formatDate(row.createdAt) }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useAuth } from '@/composables/useAuth'
+import { useComments } from '@/composables/useComments'
+import { formatDate } from '@/utils/date'
+import { User, ChatDotRound, Calendar } from '@element-plus/icons-vue'
+
+const router = useRouter()
+const { getCurrentUser, logout } = useAuth()
+const { getStats } = useComments()
+
+const user = computed(() => getCurrentUser())
+const commentStats = computed(() => getStats())
+
+// 用户头像（模拟）
+const userAvatar = computed(() => {
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value?.username}`
+})
+
+// 角色文本
+const roleText = computed(() => {
+  return user.value?.role === 'admin' ? '管理员' : '普通用户'
+})
+
+// 注册天数（模拟）
+const registrationDays = computed(() => {
+  // 模拟注册时间：7天前
+  return 7
+})
+
+// 我的评论（模拟数据，实际应从评论store中获取）
+const myComments = ref([
+  {
+    id: '1',
+    articleId: 'hello-world',
+    content: '写得很好，学到了很多！',
+    createdAt: Date.now() - 86400000 // 1天前
+  },
+  {
+    id: '2',
+    articleId: 'vue3-composition-api',
+    content: 'Composition API确实比Options API好用',
+    createdAt: Date.now() - 172800000 // 2天前
+  }
+])
+
+// 退出登录
+const handleLogout = () => {
+  logout()
+  ElMessage.success('已退出登录')
+  router.push('/login')
+}
+
+onMounted(() => {
+  // 检查是否已登录
+  if (!user.value) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+  }
+})
+</script>
+
+<style scoped lang="scss">
+.profile {
+  padding: var(--blog-spacing-md) 0;
+
+  .profile-container {
+    display: grid;
+    gap: var(--blog-spacing-lg);
+
+    @media (min-width: 768px) {
+      grid-template-columns: 1fr 2fr;
+    }
+  }
+
+  .user-info-card {
+    .user-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: var(--blog-spacing-lg);
+
+      .user-avatar {
+        margin-right: var(--blog-spacing-md);
+      }
+
+      .user-details {
+        h2 {
+          margin: 0 0 var(--blog-spacing-xs);
+          font-size: 24px;
+          font-weight: 600;
+        }
+
+        .user-meta {
+          display: flex;
+          gap: var(--blog-spacing-md);
+          color: var(--blog-text-secondary);
+
+          .user-role {
+            color: var(--blog-primary-color);
+            font-weight: 500;
+          }
+        }
+      }
+    }
+
+    .user-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--blog-spacing-md);
+      margin-bottom: var(--blog-spacing-lg);
+
+      .stat-item {
+        display: flex;
+        align-items: center;
+        padding: var(--blog-spacing-md);
+        background-color: var(--blog-bg-gray);
+        border-radius: var(--blog-border-radius);
+        text-align: left;
+
+        .stat-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          margin-right: var(--blog-spacing-sm);
+          border-radius: 50%;
+          background-color: var(--blog-primary-light);
+          color: var(--blog-primary-color);
+
+          .el-icon {
+            font-size: 16px;
+          }
+        }
+
+        .stat-content {
+          flex: 1;
+        }
+
+        .stat-value {
+          font-size: 24px;
+          font-weight: 600;
+          color: var(--blog-primary-color);
+        }
+
+        .stat-label {
+          font-size: 12px;
+          color: var(--blog-text-secondary);
+          margin-top: var(--blog-spacing-xs);
+        }
+      }
+    }
+
+    .user-actions {
+      text-align: center;
+    }
+  }
+
+  .my-comments-card {
+    h3 {
+      margin-bottom: var(--blog-spacing-md);
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--blog-spacing-xl) 0;
+
+      p {
+        margin-bottom: var(--blog-spacing-md);
+        color: var(--blog-text-secondary);
+      }
+    }
+  }
+}
+</style>

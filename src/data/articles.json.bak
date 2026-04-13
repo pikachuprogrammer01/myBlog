@@ -1,0 +1,52 @@
+[
+  {
+    "id": "hello-world",
+    "title": "Hello World",
+    "date": "2026-01-15",
+    "tags": ["Vue", "JavaScript", "教程"],
+    "excerpt": "这是我的第一篇博客文章，介绍Vue 3的基本概念。",
+    "cover": "/images/article1.jpg",
+    "published": true,
+    "content": "# Hello World\n\n欢迎来到我的博客！这是我的第一篇文章。\n\n## 内容简介\n\n本文将介绍博客的基本功能和特点。"
+  },
+  {
+    "id": "vue3-composition-api",
+    "title": "Vue 3 Composition API 入门指南",
+    "date": "2026-02-10",
+    "tags": ["Vue", "Composition API", "前端"],
+    "excerpt": "深入理解Vue 3 Composition API的核心概念和用法。",
+    "cover": "/images/article2.jpg",
+    "published": true,
+    "content": "# Vue 3 Composition API 入门指南\n\nComposition API是Vue 3的核心特性之一。\n\n## 什么是Composition API\n\nComposition API 是一种新的代码组织方式，允许你更好地组织和重用代码逻辑。\n\n### 优势\n\n1. 更好的逻辑复用\n2. 更灵活的类型推断\n3. 更清晰的代码结构"
+  },
+  {
+    "id": "element-plus-tutorial",
+    "title": "Element Plus 组件库使用教程",
+    "date": "2026-03-05",
+    "tags": ["Element Plus", "UI", "组件库"],
+    "excerpt": "学习如何使用Element Plus快速构建美观的Vue 3应用。",
+    "cover": "/images/article3.jpg",
+    "published": true,
+    "content": "# Element Plus 组件库使用教程\n\nElement Plus是一个基于Vue 3的组件库，提供了丰富的UI组件。\n\n## 安装\n\n```bash\nnpm install element-plus --save\n```\n\n## 基本使用\n\n```vue\n<template>\n  <el-button type=\"primary\">主要按钮</el-button>\n</template>\n```"
+  },
+  {
+    "id": "static-site-generation",
+    "title": "静态网站生成与部署",
+    "date": "2026-03-20",
+    "tags": ["Vite", "部署", "GitHub Pages"],
+    "excerpt": "如何使用Vite构建静态网站并部署到GitHub Pages。",
+    "cover": "/images/article4.jpg",
+    "published": true,
+    "content": "# 静态网站生成与部署\n\n静态网站具有速度快、安全性高、成本低等优点。\n\n## 为什么选择静态网站\n\n- 极快的加载速度\n- 更高的安全性（无服务器端漏洞）\n- 低成本甚至免费托管\n- 易于版本控制\n\n## 部署到GitHub Pages\n\n1. 创建GitHub仓库\n2. 配置GitHub Pages\n3. 推送构建文件\n4. 访问你的网站"
+  },
+  {
+    "id": "localstorage-web-app",
+    "title": "基于localStorage的Web应用数据持久化",
+    "date": "2026-04-01",
+    "tags": ["localStorage", "数据持久化", "前端"],
+    "excerpt": "探索在前端应用中使用localStorage进行数据持久化的最佳实践。",
+    "cover": "/images/article5.jpg",
+    "published": true,
+    "content": "# 基于localStorage的Web应用数据持久化\n\nlocalStorage是浏览器提供的本地存储方案。\n\n## localStorage API\n\n```javascript\n// 保存数据\nlocalStorage.setItem('key', 'value');\n\n// 读取数据\nconst value = localStorage.getItem('key');\n\n// 删除数据\nlocalStorage.removeItem('key');\n```\n\n## 注意事项\n\n1. 存储容量有限（通常5MB）\n2. 仅支持字符串类型\n3. 同源策略限制\n4. 无过期时间"
+  }
+]
