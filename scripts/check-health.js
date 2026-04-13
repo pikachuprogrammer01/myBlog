@@ -34,8 +34,8 @@ for (const file of criticalFiles) {
   if (!exists) allPassed = false
 }
 
-// 检查package.json脚本
-console.log('\n📦 检查package.json脚本:')
+// 检查package.json脚本和依赖
+console.log('\n📦 检查package.json脚本和依赖:')
 try {
   const pkgJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'))
   const requiredScripts = ['dev', 'build', 'preview', 'deploy', 'test']
@@ -45,6 +45,12 @@ try {
     console.log(`  ${status} npm run ${script}`)
     if (!hasScript) allPassed = false
   }
+
+  // 检查gh-pages依赖
+  const hasGhPages = pkgJson.devDependencies && pkgJson.devDependencies['gh-pages']
+  const status = hasGhPages ? '✅' : '❌'
+  console.log(`  ${status} gh-pages 依赖`)
+  if (!hasGhPages) allPassed = false
 } catch (error) {
   console.log(`  ❌ 无法读取package.json: ${error.message}`)
   allPassed = false
