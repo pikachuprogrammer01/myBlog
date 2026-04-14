@@ -1,80 +1,42 @@
 <template>
-  <div class="article-card" @click="handleClick">
-    <!-- 封面图片 -->
-    <div v-if="article.cover" class="article-card-cover">
-      <img :src="article.cover" :alt="article.title" class="cover-image" />
-      <div
-        v-if="
-          showCategory && article.categories && article.categories.length > 0
-        "
-        class="article-category"
-      >
-        <span>{{ article.categories[0] }}</span>
-      </div>
-    </div>
-
-    <!-- 内容区域 -->
-    <div class="article-card-content">
-      <!-- 标题 -->
-      <h3 class="article-title">{{ article.title }}</h3>
-
-      <!-- 摘要 -->
-      <p v-if="article.excerpt" class="article-excerpt">
-        {{ article.excerpt }}
-      </p>
-
-      <!-- 元信息 -->
-      <div class="article-meta">
-        <!-- 日期 -->
-        <div class="meta-item">
-          <el-icon><Calendar /></el-icon>
-          <span>{{ formattedDate }}</span>
-        </div>
-
-        <!-- 阅读量 -->
-        <div v-if="showViews" class="meta-item">
-          <el-icon><View /></el-icon>
-          <span>{{ article.views || 0 }} 阅读</span>
-        </div>
-
-        <!-- 评论数 -->
-        <div
-          v-if="showComments && article.commentCount !== undefined"
-          class="meta-item"
+  <div :class="['article-card', layout]" @click="handleClick">
+    <div class="card-inner">
+      <div class="cover-wrapper">
+        <el-image
+          :src="article.cover"
+          fit="cover"
+          loading="lazy"
+          preview-teleported
+          :initial-index="0"
         >
-          <el-icon><ChatDotRound /></el-icon>
-          <span>{{ article.commentCount }} 评论</span>
+          <template #placeholder>
+            <div class="image-placeholder">
+              <el-icon class="is-loading"><Loading /></el-icon>
+            </div>
+          </template>
+          <template #error>
+            <div class="image-error">
+              <el-icon><Picture /></el-icon>
+            </div>
+          </template>
+        </el-image>
+      </div>
+
+      <div class="content-wrapper">
+        <h3 class="title">{{ article.title }}</h3>
+        <p class="excerpt">{{ article.excerpt }}</p>
+
+        <div class="footer-meta">
+          <div class="left">
+            <span class="date"
+              ><el-icon><Calendar /></el-icon> {{ formattedDate }}</span
+            >
+            <span class="views"
+              ><el-icon><View /></el-icon> {{ article.views }}</span
+            >
+          </div>
+          <el-button link type="primary">阅读更多</el-button>
         </div>
-      </div>
-
-      <!-- 标签 -->
-      <div
-        v-if="showTags && article.tags && article.tags.length > 0"
-        class="article-tags"
-      >
-        <el-tag
-          v-for="tag in article.tags.slice(0, maxTags)"
-          :key="tag"
-          size="small"
-          type="info"
-          class="tag"
-        >
-          {{ tag }}
-        </el-tag>
-        <span v-if="article.tags.length > maxTags" class="tag-more">
-          +{{ article.tags.length - maxTags }}
-        </span>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div v-if="showActions" class="article-actions">
-        <el-button link size="small" @click.stop="handleReadMore">
-          阅读全文 →
-        </el-button>
-        <el-button v-if="showShare" link size="small" @click.stop="handleShare">
-          <el-icon><Share /></el-icon>
-          分享
-        </el-button>
       </div>
     </div>
   </div>
@@ -83,7 +45,7 @@
 <script setup>
   import { computed } from "vue";
   import { useRouter } from "vue-router";
-  import { Calendar, View, ChatDotRound, Share } from "@element-plus/icons-vue";
+  import { Calendar, View } from "@element-plus/icons-vue";
   import dayjs from "dayjs";
 
   const props = defineProps({
@@ -96,6 +58,10 @@
     showCategory: {
       type: Boolean,
       default: true,
+    },
+    layout: {
+      type: String,
+      default: "grid", // 默认值为 grid
     },
     showViews: {
       type: Boolean,
@@ -176,205 +142,61 @@
   };
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
   .article-card {
-    background: var(--blog-bg-card);
-    border-radius: var(--blog-border-radius-lg);
+    background: white;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: hidden;
-    box-shadow: var(--blog-shadow-sm);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
 
     &:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--blog-shadow-lg);
-
-      .article-title {
-        color: var(--blog-primary-color);
-      }
+      transform: translateY(-8px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
     }
 
-    .article-card-cover {
-      position: relative;
-      height: 180px;
-      overflow: hidden;
-
-      .cover-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.5s ease;
-      }
-
-      .article-category {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: rgba(var(--blog-primary-rgb), 0.9);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 500;
-      }
-
-      &:hover {
-        .cover-image {
-          transform: scale(1.05);
+    // Grid 模式布局 (默认)
+    &.grid {
+      .card-inner {
+        display: flex;
+        flex-direction: column;
+        .cover-wrapper {
+          height: 200px;
+        }
+        .content-wrapper {
+          padding: 20px;
         }
       }
     }
 
-    .article-card-content {
-      flex: 1;
-      padding: var(--blog-spacing-lg);
-      display: flex;
-      flex-direction: column;
-
-      .article-title {
-        font-size: 18px;
-        font-weight: 600;
-        line-height: 1.4;
-        margin: 0 0 var(--blog-spacing-sm) 0;
-        color: var(--blog-text-primary);
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        transition: color 0.3s ease;
-      }
-
-      .article-excerpt {
-        flex: 1;
-        font-size: 14px;
-        line-height: 1.6;
-        color: var(--blog-text-secondary);
-        margin: 0 0 var(--blog-spacing-md) 0;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-
-      .article-meta {
+    // List 模式布局 (差异化优化)
+    &.list {
+      .card-inner {
         display: flex;
-        align-items: center;
-        gap: var(--blog-spacing-md);
-        margin-bottom: var(--blog-spacing-md);
-        font-size: 13px;
-        color: var(--blog-text-muted);
-
-        .meta-item {
+        flex-direction: row; // 横向排列
+        height: 180px;
+        .cover-wrapper {
+          width: 280px;
+          flex-shrink: 0;
+        }
+        .content-wrapper {
+          padding: 25px;
           display: flex;
-          align-items: center;
-          gap: 4px;
-
-          .el-icon {
-            font-size: 14px;
-          }
+          flex-direction: column;
+          justify-content: center;
         }
       }
+    }
 
-      .article-tags {
-        margin-bottom: var(--blog-spacing-md);
+    .footer-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      font-size: 13px;
+      color: #909399;
+      .left {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-
-        .tag {
-          height: 24px;
-          line-height: 22px;
-        }
-
-        .tag-more {
-          font-size: 12px;
-          color: var(--blog-text-muted);
-          line-height: 24px;
-          margin-left: 4px;
-        }
-      }
-
-      .article-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: var(--blog-spacing-sm);
-        border-top: 1px solid var(--blog-border-light);
-
-        .el-button {
-          color: var(--blog-text-muted);
-          font-size: 14px;
-
-          &:hover {
-            color: var(--blog-primary-color);
-          }
-
-          .el-icon {
-            margin-right: 4px;
-          }
-        }
-      }
-    }
-  }
-
-  // 紧凑模式
-  .article-card.compact {
-    .article-card-cover {
-      height: 140px;
-    }
-
-    .article-card-content {
-      padding: var(--blog-spacing-md);
-
-      .article-title {
-        font-size: 16px;
-        margin-bottom: var(--blog-spacing-xs);
-      }
-
-      .article-excerpt {
-        font-size: 13px;
-        -webkit-line-clamp: 2;
-        margin-bottom: var(--blog-spacing-sm);
-      }
-
-      .article-meta {
-        margin-bottom: var(--blog-spacing-sm);
-      }
-    }
-  }
-
-  // 无封面模式
-  .article-card.no-cover {
-    .article-card-content {
-      padding-top: var(--blog-spacing-lg);
-    }
-  }
-
-  // 响应式设计
-  @media (max-width: 768px) {
-    .article-card {
-      .article-card-cover {
-        height: 160px;
-      }
-
-      .article-card-content {
-        padding: var(--blog-spacing-md);
-
-        .article-title {
-          font-size: 16px;
-        }
-
-        .article-excerpt {
-          font-size: 13px;
-        }
-
-        .article-meta {
-          font-size: 12px;
-          gap: var(--blog-spacing-sm);
-        }
+        gap: 15px;
       }
     }
   }

@@ -1,125 +1,93 @@
 <template>
-  <div class="tags">
-    <h1 class="blog-page-title">
-      <el-icon><PriceTag /></el-icon>
-      标签归档
-    </h1>
-    <div class="blog-card">
-      <!-- 标签云 -->
-      <div class="tag-cloud">
-        <h3>
-          <el-icon><DataAnalysis /></el-icon>
-          标签云
-        </h3>
-        <div class="cloud-container">
-          <el-tag
-            v-for="tag in popularTags"
-            :key="tag.tag"
-            :type="getTagType(tag.count)"
-            size="large"
-            class="cloud-tag"
-            @click="selectTag(tag.tag)"
-          >
-            <el-icon><PriceTag /></el-icon>
-            {{ tag.tag }}
-            <span class="tag-count">({{ tag.count }})</span>
-          </el-tag>
-        </div>
+  <div class="tags-container">
+    <div class="blog-card stats-overview">
+      <div class="stat-item">
+        <span class="label">标签总数</span>
+        <span class="value">{{ allTags.length }}</span>
       </div>
+      <el-divider direction="vertical" />
+      <div class="stat-item">
+        <span class="label">文章总数</span>
+        <span class="value">{{ allArticles.length }}</span>
+      </div>
+    </div>
 
-      <!-- 选中的标签文章列表 -->
+    <div class="blog-card tag-cloud-card">
+      <h3 class="section-title">
+        <el-icon><DataAnalysis /></el-icon> 智能标签云
+      </h3>
+      <div class="cloud-wrapper">
+        <el-tag
+          v-for="tag in popularTags"
+          :key="tag.tag"
+          :type="getTagType(tag.count)"
+          class="interactive-tag"
+          :class="{ 'is-active': selectedTag === tag.tag }"
+          @click="selectTag(tag.tag)"
+        >
+          <el-icon><PriceTag /></el-icon>
+          {{ tag.tag }}
+          <span class="count-badge">{{ tag.count }}</span>
+        </el-tag>
+      </div>
+    </div>
+
+    <transition name="el-zoom-in-top">
       <div v-if="selectedTag" class="selected-tag-section">
-        <div class="tag-header">
-          <h3>
-            <el-icon><PriceTag /></el-icon>
-            标签：{{ selectedTag }}
-          </h3>
-          <el-button link @click="clearSelectedTag">
-            <el-icon><Close /></el-icon>
-            清除筛选
-          </el-button>
-        </div>
+        <div class="blog-card list-card">
+          <div class="list-header">
+            <div class="current-tag">
+              <el-icon><CollectionTag /></el-icon>
+              正在查看：<span class="highlight">{{ selectedTag }}</span>
+            </div>
+            <el-button link type="primary" @click="clearSelectedTag">
+              <el-icon><Close /></el-icon> 清除筛选
+            </el-button>
+          </div>
 
-        <div v-if="filteredArticles.length === 0" class="empty-state">
-          <p>暂无相关文章</p>
-        </div>
-        <div v-else>
-          <el-table :data="filteredArticles" style="width: 100%">
+          <el-table :data="filteredArticles" class="custom-table" stripe>
             <el-table-column prop="title" label="文章标题">
-              <template #header>
-                <span class="table-header">
-                  <el-icon><Document /></el-icon>
-                  文章标题
-                </span>
-              </template>
               <template #default="{ row }">
-                <router-link :to="`/article/${row.id}`" class="article-link">
-                  <el-icon><Document /></el-icon>
+                <router-link
+                  :to="`/article/${row.id}`"
+                  class="article-title-link"
+                >
                   {{ row.title }}
                 </router-link>
               </template>
             </el-table-column>
-            <el-table-column prop="date" label="发布日期" width="120">
-              <template #header>
-                <span class="table-header">
-                  <el-icon><Calendar /></el-icon>
-                  发布日期
-                </span>
-              </template>
+            <el-table-column
+              prop="date"
+              label="发布日期"
+              width="150"
+              align="center"
+            >
               <template #default="{ row }">
-                <div class="date-cell">
-                  <el-icon><Calendar /></el-icon>
-                  {{ formatDate(row.date) }}
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="标签" width="200">
-              <template #header>
-                <span class="table-header">
-                  <el-icon><PriceTag /></el-icon>
-                  标签
-                </span>
-              </template>
-              <template #default="{ row }">
-                <div class="article-tags">
-                  <el-tag
-                    v-for="tag in row.tags"
-                    :key="tag"
-                    size="small"
-                    class="article-tag"
-                    @click="selectTag(tag)"
-                  >
-                    <el-icon><PriceTag /></el-icon>
-                    {{ tag }}
-                  </el-tag>
-                </div>
+                <span class="date-text">{{ formatDate(row.date) }}</span>
               </template>
             </el-table-column>
           </el-table>
         </div>
       </div>
+    </transition>
 
-      <!-- 所有标签统计 -->
-      <div class="all-tags-section">
-        <h3>
-          <el-icon><DataAnalysis /></el-icon>
-          所有标签统计
-        </h3>
-        <div class="tags-stats">
-          <div v-for="tag in allTags" :key="tag.tag" class="tag-stat-item">
-            <div class="tag-name">
-              <el-icon><PriceTag /></el-icon>
-              {{ tag.tag }}
-            </div>
-            <div class="tag-progress">
-              <el-progress
-                :percentage="getTagPercentage(tag.count)"
-                :show-text="false"
-                :stroke-width="6"
-              />
-            </div>
-            <div class="tag-count">{{ tag.count }}篇</div>
+    <div class="blog-card statistics-card">
+      <h3 class="section-title">
+        <el-icon><TrendCharts /></el-icon> 标签热度分布
+      </h3>
+      <div class="stats-grid">
+        <div v-for="tag in allTags" :key="tag.tag" class="stat-bar-item">
+          <div class="bar-info">
+            <span class="name">{{ tag.tag }}</span>
+            <span class="percent">{{ tag.count }} 篇</span>
           </div>
+          <el-progress
+            :percentage="getTagPercentage(tag.count)"
+            :color="customColors"
+            :stroke-width="8"
+            striped
+            striped-flow
+          />
         </div>
       </div>
     </div>
@@ -127,276 +95,220 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useArticles } from '@/composables/useArticles'
-import { formatDate } from '@/utils/date'
-import {
-  PriceTag,
-  Document,
-  Calendar,
-  DataAnalysis,
-  Close
-} from '@element-plus/icons-vue'
+  import { ref, computed } from "vue";
+  import { useArticles } from "@/composables/useArticles";
+  import { formatDate } from "@/utils/date";
+  import {
+    PriceTag,
+    DataAnalysis,
+    Close,
+    CollectionTag,
+    TrendCharts,
+  } from "@element-plus/icons-vue";
 
-const { getPopularTags, getArticlesByTag, getArticles } = useArticles()
+  const { getPopularTags, getArticlesByTag, getArticles } = useArticles();
+  const selectedTag = ref("");
 
-const selectedTag = ref('')
-const popularTags = computed(() => getPopularTags())
+  const popularTags = computed(() => getPopularTags());
+  const allArticles = computed(() => getArticles());
 
-// 获取所有文章以计算标签统计
-const allArticles = computed(() => getArticles())
-const allTags = computed(() => {
-  const tagCount = {}
-  allArticles.value.forEach(article => {
-    if (article.tags) {
-      article.tags.forEach(tag => {
-        tagCount[tag] = (tagCount[tag] || 0) + 1
-      })
-    }
-  })
+  const allTags = computed(() => {
+    const tagCount = {};
+    allArticles.value.forEach((article) => {
+      article.tags?.forEach((tag) => {
+        tagCount[tag] = (tagCount[tag] || 0) + 1;
+      });
+    });
+    return Object.entries(tagCount)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count);
+  });
 
-  return Object.entries(tagCount)
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count)
-})
+  const filteredArticles = computed(() =>
+    selectedTag.value ? getArticlesByTag(selectedTag.value) : [],
+  );
 
-// 根据选中的标签筛选文章
-const filteredArticles = computed(() => {
-  if (!selectedTag.value) return []
-  return getArticlesByTag(selectedTag.value)
-})
+  const getTagType = (count) => {
+    if (count > 8) return "danger";
+    if (count > 4) return "warning";
+    return "primary";
+  };
 
-// 根据标签数量获取tag类型
-const getTagType = (count) => {
-  if (count >= 10) return 'danger'
-  if (count >= 5) return 'warning'
-  if (count >= 3) return 'success'
-  return 'info'
-}
+  const getTagPercentage = (count) => {
+    const max = Math.max(...allTags.value.map((t) => t.count), 1);
+    return Math.round((count / max) * 100);
+  };
 
-// 计算标签百分比
-const getTagPercentage = (count) => {
-  const maxCount = Math.max(...allTags.value.map(t => t.count), 1)
-  return Math.round((count / maxCount) * 100)
-}
+  const customColors = [
+    { color: "#909399", percentage: 20 },
+    { color: "#409eff", percentage: 40 },
+    { color: "#67c23a", percentage: 60 },
+    { color: "#e6a23c", percentage: 80 },
+    { color: "#f56c6c", percentage: 100 },
+  ];
 
-// 选择标签
-const selectTag = (tag) => {
-  selectedTag.value = tag
-  // 滚动到选中标签区域
-  setTimeout(() => {
-    const element = document.querySelector('.selected-tag-section')
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, 100)
-}
+  const selectTag = (tag) => {
+    selectedTag.value = tag;
+  };
 
-// 清除选中的标签
-const clearSelectedTag = () => {
-  selectedTag.value = ''
-}
+  const clearSelectedTag = () => {
+    selectedTag.value = "";
+  };
 </script>
 
 <style scoped lang="scss">
-.tags {
-  padding: var(--blog-spacing-md) 0;
+  .tags-container {
+    padding: 20px 0;
 
-  .blog-page-title {
-    display: flex;
-    align-items: center;
-    gap: var(--blog-spacing-sm);
-
-    .el-icon {
-      color: var(--blog-primary-color);
-    }
-  }
-
-  .tag-cloud {
-    margin-bottom: var(--blog-spacing-xl);
-
-    h3 {
-      margin-bottom: var(--blog-spacing-lg);
-      font-size: 18px;
-      font-weight: 600;
+    // 1. 数据概览卡片
+    .stats-overview {
       display: flex;
+      justify-content: center;
       align-items: center;
-      gap: var(--blog-spacing-xs);
+      padding: 20px !important;
+      margin-bottom: 25px;
+      gap: 40px;
 
-      .el-icon {
-        color: var(--blog-primary-color);
-      }
-    }
-
-    .cloud-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--blog-spacing-sm);
-    }
-
-    .cloud-tag {
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--blog-shadow);
-      }
-
-      .el-icon {
-        font-size: 14px;
-      }
-
-      .tag-count {
-        font-size: 0.8em;
-        opacity: 0.8;
-      }
-    }
-  }
-
-  .selected-tag-section {
-    margin-bottom: var(--blog-spacing-xl);
-
-    .tag-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: var(--blog-spacing-lg);
-
-      .el-button {
-        display: flex;
-        align-items: center;
-        gap: var(--blog-spacing-xs);
-      }
-
-      h3 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: var(--blog-spacing-xs);
-
-        .el-icon {
-          color: var(--blog-primary-color);
-        }
-      }
-    }
-
-    .article-link {
-      color: var(--blog-text-primary);
-      text-decoration: none;
-
-      &:hover {
-        color: var(--blog-primary-color);
-        text-decoration: underline;
-      }
-    }
-
-    .article-tags {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-
-      .article-tag {
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-      }
-    }
-
-    .table-header {
-      display: flex;
-      align-items: center;
-      gap: var(--blog-spacing-xs);
-
-      .el-icon {
-        font-size: 14px;
-        color: var(--blog-primary-color);
-      }
-    }
-
-    .date-cell {
-      display: flex;
-      align-items: center;
-      gap: var(--blog-spacing-xs);
-
-      .el-icon {
-        font-size: 14px;
-        color: var(--blog-info-color);
-      }
-    }
-
-    .article-link {
-      display: flex;
-      align-items: center;
-      gap: var(--blog-spacing-xs);
-
-      .el-icon {
-        font-size: 14px;
-        color: var(--blog-info-color);
-      }
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: var(--blog-spacing-xl);
-      color: var(--blog-text-secondary);
-    }
-  }
-
-  .all-tags-section {
-    h3 {
-      margin-bottom: var(--blog-spacing-lg);
-      font-size: 18px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: var(--blog-spacing-xs);
-
-      .el-icon {
-        color: var(--blog-primary-color);
-      }
-    }
-
-    .tags-stats {
-      display: flex;
-      flex-direction: column;
-      gap: var(--blog-spacing-md);
-    }
-
-    .tag-stat-item {
-      display: grid;
-      grid-template-columns: 100px 1fr 60px;
-      align-items: center;
-      gap: var(--blog-spacing-md);
-
-      .tag-name {
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: var(--blog-spacing-xs);
-
-        .el-icon {
-          color: var(--blog-primary-color);
+      .stat-item {
+        text-align: center;
+        .label {
+          color: #909399;
           font-size: 14px;
+          margin-right: 8px;
+        }
+        .value {
+          color: var(--el-color-primary);
+          font-size: 24px;
+          font-weight: bold;
+        }
+      }
+    }
+
+    // 2. 标签云
+    .tag-cloud-card {
+      padding: 30px !important;
+      margin-bottom: 25px;
+
+      .cloud-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        justify-content: center;
+      }
+
+      .interactive-tag {
+        height: 40px;
+        padding: 0 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+
+        &:hover {
+          transform: translateY(-3px) scale(1.05);
+          box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        &.is-active {
+          background: var(--el-color-primary);
+          color: white;
+          border-color: var(--el-color-primary);
+          .count-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+          }
+        }
+
+        .count-badge {
+          background: #f0f2f5;
+          color: #909399;
+          padding: 2px 8px;
+          border-radius: 10px;
+          font-size: 12px;
+          transition: all 0.3s;
+        }
+      }
+    }
+
+    // 3. 筛选列表
+    .list-card {
+      margin-bottom: 25px;
+      .list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #f0f2f5;
+        margin-bottom: 10px;
+
+        .current-tag {
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          .highlight {
+            color: var(--el-color-primary);
+            font-weight: bold;
+          }
         }
       }
 
-      .tag-progress {
-        flex: 1;
+      .article-title-link {
+        color: var(--el-text-color-primary);
+        text-decoration: none;
+        font-weight: 500;
+        &:hover {
+          color: var(--el-color-primary);
+        }
       }
 
-      .tag-count {
-        text-align: right;
-        color: var(--blog-text-secondary);
-        font-size: 14px;
+      .date-text {
+        color: #909399;
+        font-size: 13px;
+      }
+    }
+
+    // 4. 统计统计
+    .statistics-card {
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 30px;
+        margin-top: 20px;
+      }
+
+      .stat-bar-item {
+        .bar-info {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-size: 14px;
+          .name {
+            font-weight: bold;
+          }
+          .percent {
+            color: #909399;
+          }
+        }
+      }
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 25px;
+      color: var(--el-text-color-primary);
+
+      .el-icon {
+        color: var(--el-color-primary);
       }
     }
   }
-}
 </style>

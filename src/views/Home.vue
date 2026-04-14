@@ -7,14 +7,32 @@
         <main class="home-main">
           <SectionHeader v-model:layout="layout" />
 
-          <div :class="['article-wrapper', `is-${layout}`]">
-            <ArticleCard
-              v-for="item in articles"
-              :key="item.id"
-              :article="item"
-              :layout="layout"
-            />
-          </div>
+          <el-skeleton :loading="!articles.length" animated :count="3">
+            <template #template>
+              <div style="padding: 14px; display: flex; gap: 20px">
+                <el-skeleton-item
+                  variant="image"
+                  style="width: 200px; height: 150px"
+                />
+                <div style="flex: 1">
+                  <el-skeleton-item variant="p" style="width: 50%" />
+                  <el-skeleton-item variant="text" />
+                  <el-skeleton-item variant="text" style="width: 30%" />
+                </div>
+              </div>
+            </template>
+
+            <template #default>
+              <div :class="['article-wrapper', `is-${layout}`]">
+                <ArticleCard
+                  v-for="item in articles"
+                  :key="item.id"
+                  :article="item"
+                  :layout="layout"
+                />
+              </div>
+            </template>
+          </el-skeleton>
 
           <el-pagination
             v-model:current-page="currentPage"
@@ -25,24 +43,29 @@
             class="home-pagination"
           />
         </main>
-
-        <Sidebar />
+        <Sidebar v-if="articles.length" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-  // 逻辑抽离
+  import { defineAsyncComponent } from "vue";
   import useHome from "@/composables/useHomeArticles.js";
 
-  // 组件引入
+  // 1. 核心首屏组件同步引入
   import Carousel from "@/components/home/Carousel.vue";
-  import Sidebar from "@/components/home/Sidebar.vue";
   import SectionHeader from "@/components/home/SectionHeader.vue";
-  import ArticleCard from "@/components/blog/ArticleCard.vue"; // 公共组件
 
-  // 初始化逻辑
+  // 2. 非首屏或较重的组件异步引入（懒加载）
+  const ArticleCard = defineAsyncComponent(
+    () => import("@/components/blog/ArticleCard.vue"),
+  );
+  const Sidebar = defineAsyncComponent(
+    () => import("@/components/home/Sidebar.vue"),
+  );
+
+  // 初始化逻辑保持不变
   const { layout, currentPage, pageSize, total, articles, featuredArticles } =
     useHome();
 </script>

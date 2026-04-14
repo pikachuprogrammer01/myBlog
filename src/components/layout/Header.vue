@@ -1,400 +1,344 @@
 <template>
-  <header class="blog-header">
-    <div class="header-container">
-      <!-- 左侧：Logo和站点名称 -->
-      <div class="header-left">
-        <router-link to="/" class="logo-link">
-          <div class="logo-icon">
-            <el-icon :size="28"><Reading /></el-icon>
-          </div>
-          <div class="logo-text">
-            <h1 class="site-title">我的博客</h1>
-            <p class="site-subtitle">分享技术与生活</p>
-          </div>
+  <header :class="['blog-header', { 'is-scrolled': isScrolled }]">
+    <div class="header-content">
+      <div class="header-left" @click="router.push('/')">
+        <div class="logo-circle">
+          <el-icon><Reading /></el-icon>
+        </div>
+        <span class="logo-text">wushu<span>Blog</span></span>
+      </div>
+
+      <nav class="header-center">
+        <router-link to="/" class="nav-link">
+          <el-icon><HomeFilled /></el-icon> 首页
         </router-link>
-      </div>
+        <router-link to="/archive" class="nav-link">
+          <el-icon><Folder /></el-icon> 归档
+        </router-link>
+        <router-link to="/tags" class="nav-link">
+          <el-icon><PriceTag /></el-icon> 标签
+        </router-link>
+      </nav>
 
-      <!-- 中间：导航菜单 -->
-      <div class="header-center">
-        <nav class="main-nav">
-          <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
-            <el-icon><HomeFilled /></el-icon>
-            <span class="nav-text">首页</span>
-          </router-link>
-
-          <router-link to="/categories" class="nav-item" :class="{ active: $route.path.startsWith('/categories') }">
-            <el-icon><Folder /></el-icon>
-            <span class="nav-text">分类</span>
-          </router-link>
-
-          <router-link to="/tags" class="nav-item" :class="{ active: $route.path.startsWith('/tags') }">
-            <el-icon><PriceTag /></el-icon>
-            <span class="nav-text">标签</span>
-          </router-link>
-
-          <router-link to="/archive" class="nav-item" :class="{ active: $route.path.startsWith('/archive') }">
-            <el-icon><Calendar /></el-icon>
-            <span class="nav-text">归档</span>
-          </router-link>
-
-          <router-link to="/about" class="nav-item" :class="{ active: $route.path.startsWith('/about') }">
-            <el-icon><User /></el-icon>
-            <span class="nav-text">关于</span>
-          </router-link>
-
-          <router-link to="/tools" class="nav-item" :class="{ active: $route.path.startsWith('/tools') }">
-            <el-icon><Tools /></el-icon>
-            <span class="nav-text">工具</span>
-          </router-link>
-        </nav>
-      </div>
-
-      <!-- 右侧：用户操作 -->
       <div class="header-right">
-        <!-- 搜索按钮（移动端） -->
-        <el-button
-          class="mobile-search-btn"
-          link
-          size="large"
-          @click="showSearchDialog = true"
-        >
-          <el-icon><Search /></el-icon>
-        </el-button>
-
-        <!-- 搜索框（桌面端） -->
-        <div class="desktop-search">
+        <div class="search-box">
           <el-input
             v-model="searchQuery"
             placeholder="搜索文章..."
-            size="small"
+            :prefix-icon="Search"
+            clearable
             @keyup.enter="handleSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
+            class="search-input"
+          />
         </div>
 
-        <!-- 用户状态 -->
-        <div class="user-section">
+        <div class="auth-zone">
           <template v-if="isAuthenticated">
-            <el-dropdown @command="handleUserCommand">
-              <div class="user-avatar">
+            <el-button
+              v-if="isAdmin"
+              type="primary"
+              circle
+              :icon="CirclePlus"
+              @click="router.push('/admin/write')"
+              class="write-btn"
+            />
+
+            <el-dropdown @command="handleUserCommand" trigger="click">
+              <div class="user-info-trigger">
                 <el-avatar :size="36" :src="userAvatar" />
-                <span class="user-name">{{ currentUser?.username }}</span>
-                <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
+                <el-icon><ArrowDown /></el-icon>
               </div>
               <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="profile">
-                    <el-icon><User /></el-icon>
-                    个人中心
-                  </el-dropdown-item>
-                  <el-dropdown-item v-if="isAdmin" command="admin">
-                    <el-icon><Setting /></el-icon>
-                    管理后台
-                  </el-dropdown-item>
-                  <el-dropdown-item divided command="logout">
-                    <el-icon><SwitchButton /></el-icon>
+                <el-dropdown-menu class="user-dropdown">
+                  <div class="dropdown-user-header">
+                    <p class="name">{{ currentUser?.username }}</p>
+                    <p class="role">{{ isAdmin ? "管理员" : "普通用户" }}</p>
+                  </div>
+                  <el-dropdown-item command="profile" :icon="User"
+                    >个人中心</el-dropdown-item
+                  >
+                  <el-dropdown-item v-if="isAdmin" command="admin" :icon="Tools"
+                    >管理后台</el-dropdown-item
+                  >
+                  <el-dropdown-item
+                    divided
+                    command="logout"
+                    :icon="SwitchButton"
+                    class="logout-item"
+                  >
                     退出登录
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
           </template>
+
           <template v-else>
-            <div class="auth-buttons">
-              <el-button link size="small" @click="$router.push('/login')">
-                <el-icon><User /></el-icon>
-                登录
-              </el-button>
-              <el-button type="primary" size="small" @click="$router.push('/register')">
-                <el-icon><CirclePlus /></el-icon>
-                注册
-              </el-button>
-            </div>
+            <el-button link @click="router.push('/login')">登录</el-button>
+            <el-button type="primary" round @click="router.push('/register')"
+              >注册</el-button
+            >
           </template>
         </div>
       </div>
     </div>
-
-    <!-- 移动端搜索对话框 -->
-    <el-dialog
-      v-model="showSearchDialog"
-      title="搜索文章"
-      width="90%"
-      top="20vh"
-      :close-on-click-modal="false"
-    >
-      <div class="search-dialog-content">
-        <el-input
-          v-model="searchQuery"
-          placeholder="输入关键词搜索文章..."
-          size="large"
-          @keyup.enter="handleMobileSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <div class="search-hint">
-          <p>按 Enter 键搜索</p>
-        </div>
-      </div>
-    </el-dialog>
   </header>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  HomeFilled,
-  Folder,
-  PriceTag,
-  Calendar,
-  User,
-  Tools,
-  Search,
-  ArrowDown,
-  Setting,
-  SwitchButton,
-  CirclePlus,
-  Reading
-} from '@element-plus/icons-vue'
-import { useAuth } from '@/composables/useAuth'
+  import { ref, computed, onMounted, onUnmounted } from "vue";
+  import { useRoute, useRouter } from "vue-router";
+  import { ElMessage } from "element-plus";
+  import {
+    HomeFilled,
+    Folder,
+    PriceTag,
+    User,
+    Tools,
+    Search,
+    ArrowDown,
+    SwitchButton,
+    CirclePlus,
+    Reading,
+  } from "@element-plus/icons-vue";
+  import { useAuth } from "@/composables/useAuth";
 
-const route = useRoute()
-const router = useRouter()
-const { getCurrentUser, logout: authLogout, isAuthenticated, isAdmin } = useAuth()
+  const route = useRoute();
+  const router = useRouter();
+  const {
+    getCurrentUser,
+    logout: authLogout,
+    isAuthenticated,
+    isAdmin,
+  } = useAuth();
 
-const searchQuery = ref('')
-const showSearchDialog = ref(false)
+  const searchQuery = ref("");
+  const showSearchDialog = ref(false);
 
-// 用户信息
-const currentUser = computed(() => getCurrentUser())
+  // 用户信息
+  const currentUser = computed(() => getCurrentUser());
 
-// 用户头像（模拟）
-const userAvatar = computed(() => {
-  if (!currentUser.value) return ''
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.value.username}`
-})
+  // 用户头像（模拟）
+  const userAvatar = computed(() => {
+    if (!currentUser.value) return "";
+    return `https://api.dicebear.com/7.x/pixel-art/svg?seed=Gemini`;
+  });
 
-// 搜索处理
-const handleSearch = () => {
-  if (!searchQuery.value.trim()) {
-    ElMessage.warning('请输入搜索关键词')
-    return
-  }
-  router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`)
-  searchQuery.value = ''
-}
+  // 搜索处理
+  const handleSearch = () => {
+    if (!searchQuery.value.trim()) {
+      ElMessage.warning("请输入搜索关键词");
+      return;
+    }
+    router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
+    searchQuery.value = "";
+  };
 
-// 移动端搜索处理
-const handleMobileSearch = () => {
-  if (!searchQuery.value.trim()) {
-    ElMessage.warning('请输入搜索关键词')
-    return
-  }
-  router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`)
-  searchQuery.value = ''
-  showSearchDialog.value = false
-}
+  // 移动端搜索处理
+  const handleMobileSearch = () => {
+    if (!searchQuery.value.trim()) {
+      ElMessage.warning("请输入搜索关键词");
+      return;
+    }
+    router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
+    searchQuery.value = "";
+    showSearchDialog.value = false;
+  };
 
-// 用户菜单命令处理
-const handleUserCommand = (command) => {
-  switch (command) {
-    case 'profile':
-      router.push('/profile')
-      break
-    case 'admin':
-      router.push('/admin')
-      break
-    case 'logout':
-      handleLogout()
-      break
-  }
-}
+  // 用户菜单命令处理
+  const handleUserCommand = (command) => {
+    switch (command) {
+      case "profile":
+        router.push("/profile");
+        break;
+      case "admin":
+        router.push("/admin");
+        break;
+      case "logout":
+        handleLogout();
+        break;
+    }
+  };
 
-// 退出登录
-const handleLogout = () => {
-  authLogout()
-  ElMessage.success('已退出登录')
-  router.push('/login')
-}
+  // 退出登录
+  const handleLogout = () => {
+    authLogout();
+    ElMessage.success("已退出登录");
+    router.push("/login");
+  };
+
+  const isScrolled = ref(false);
+
+  const handleScroll = () => {
+    isScrolled.value = window.scrollY > 20;
+  };
+
+  onMounted(() => {
+    window.addEventListener("scroll", handleScroll);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener("scroll", handleScroll);
+  });
 </script>
 
 <style scoped lang="scss">
-.blog-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--blog-header-height, 64px);
-  background-color: var(--blog-bg-white);
-  box-shadow: var(--blog-shadow-light);
-  z-index: 1000;
-  border-bottom: 1px solid var(--blog-border-light);
+  .blog-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 
-  .header-container {
-    height: 100%;
-    max-width: var(--blog-container-width, 1200px);
-    margin: 0 auto;
-    padding: 0 var(--blog-spacing-md);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    @media (max-width: 768px) {
-      padding: 0 var(--blog-spacing-sm);
+    &.is-scrolled {
+      height: 60px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     }
-  }
 
-  .header-left {
-    .logo-link {
+    .header-content {
+      max-width: 1200px;
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 20px;
       display: flex;
       align-items: center;
-      text-decoration: none;
-      color: inherit;
+      justify-content: space-between;
+    }
 
-      .logo-icon {
-        margin-right: var(--blog-spacing-sm);
-        color: var(--blog-primary-color);
+    // 左侧 Logo
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+
+      .logo-circle {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, var(--el-color-primary), #67c23a);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 20px;
       }
 
       .logo-text {
-        .site-title {
-          font-size: 18px;
-          font-weight: 700;
-          margin: 0;
-          color: var(--blog-text-primary);
-          line-height: 1.2;
-        }
-
-        .site-subtitle {
-          font-size: 12px;
-          margin: 0;
-          color: var(--blog-text-secondary);
-          line-height: 1.2;
+        font-size: 20px;
+        font-weight: 800;
+        color: #303133;
+        letter-spacing: -0.5px;
+        span {
+          color: var(--el-color-primary);
         }
       }
     }
-  }
 
-  .header-center {
-    flex: 1;
-    margin: 0 var(--blog-spacing-lg);
-
-    @media (max-width: 992px) {
-      display: none;
-    }
-
-    .main-nav {
+    // 中间 导航
+    .header-center {
       display: flex;
-      justify-content: center;
-      gap: var(--blog-spacing-md);
+      gap: 25px;
 
-      .nav-item {
+      .nav-link {
+        text-decoration: none;
+        color: #606266;
+        font-weight: 500;
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: var(--blog-spacing-xs) var(--blog-spacing-sm);
-        color: var(--blog-text-secondary);
-        text-decoration: none;
-        border-radius: var(--blog-border-radius);
-        transition: all 0.3s ease;
+        gap: 5px;
+        transition: all 0.2s;
+        font-size: 15px;
 
-        &:hover {
-          color: var(--blog-primary-color);
-          background-color: var(--blog-bg-gray);
-        }
-
-        &.active {
-          color: var(--blog-primary-color);
-          background-color: var(--blog-primary-light);
-          font-weight: 500;
+        &:hover,
+        &.router-link-active {
+          color: var(--el-color-primary);
         }
 
         .el-icon {
-          font-size: 16px;
-        }
-
-        .nav-text {
-          font-size: 14px;
+          font-size: 17px;
         }
       }
     }
-  }
 
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: var(--blog-spacing-md);
+    // 右侧 功能区
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
 
-    .mobile-search-btn {
-      display: none;
-
-      @media (max-width: 768px) {
-        display: flex;
-      }
-    }
-
-    .desktop-search {
-      width: 200px;
-
-      @media (max-width: 768px) {
-        display: none;
-      }
-    }
-
-    .user-section {
-      .user-avatar {
-        display: flex;
-        align-items: center;
-        gap: var(--blog-spacing-sm);
-        cursor: pointer;
-        padding: var(--blog-spacing-xs) var(--blog-spacing-sm);
-        border-radius: var(--blog-border-radius);
-        transition: background-color 0.3s ease;
-
-        &:hover {
-          background-color: var(--blog-bg-gray);
-        }
-
-        .user-name {
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--blog-text-primary);
-
-          @media (max-width: 576px) {
-            display: none;
+      .search-input {
+        :deep(.el-input__wrapper) {
+          border-radius: 20px;
+          background: rgba(0, 0, 0, 0.04);
+          box-shadow: none !important;
+          border: 1px solid transparent;
+          transition: all 0.3s;
+          &:hover,
+          &.is-focus {
+            border-color: var(--el-color-primary-light-5);
+            background: white;
           }
         }
-
-        .dropdown-icon {
-          font-size: 12px;
-          color: var(--blog-text-secondary);
-        }
       }
 
-      .auth-buttons {
+      .auth-zone {
         display: flex;
-        gap: var(--blog-spacing-sm);
+        align-items: center;
+        gap: 15px;
+
+        .user-info-trigger {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 20px;
+          transition: background 0.3s;
+          &:hover {
+            background: rgba(0, 0, 0, 0.05);
+          }
+        }
       }
     }
   }
-}
 
-.search-dialog-content {
-  .el-input {
-    margin-bottom: var(--blog-spacing-md);
+  // 下拉菜单增强
+  .user-dropdown {
+    padding: 8px;
+    .dropdown-user-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 8px;
+      .name {
+        font-weight: bold;
+        font-size: 14px;
+        margin: 0;
+      }
+      .role {
+        font-size: 12px;
+        color: #999;
+        margin: 4px 0 0;
+      }
+    }
+    .logout-item {
+      color: var(--el-color-danger);
+    }
   }
 
-  .search-hint {
-    text-align: center;
-    color: var(--blog-text-secondary);
-    font-size: 12px;
+  // 移动端适配处理（隐藏中间导航，缩短搜索框）
+  @media (max-width: 992px) {
+    .header-center {
+      display: none;
+    }
+    .search-box {
+      display: none;
+    } // 移动端建议使用你原有的 showSearchDialog
   }
-}
 </style>
