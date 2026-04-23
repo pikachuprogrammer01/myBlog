@@ -13,7 +13,7 @@
         >
           <div
             class="bg-image"
-            :style="{ backgroundImage: `url(${item.cover})` }"
+            :style="{ backgroundImage: `url(${getCoverUrl(item)})` }"
           ></div>
 
           <div class="carousel-overlay">
@@ -36,9 +36,14 @@
 
 <script setup>
   import { Right } from "@element-plus/icons-vue";
+  import { resolveArticleCover } from "@/utils/article-cover";
+
   defineProps({
     items: { type: Array, default: () => [] },
   });
+
+  const getCoverUrl = (item) =>
+    resolveArticleCover(item?.cover, item?.id || item?.title);
 </script>
 
 <style lang="scss" scoped>

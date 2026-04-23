@@ -3,7 +3,7 @@
     <div class="card-inner">
       <div class="cover-wrapper">
         <el-image
-          :src="article.cover"
+          :src="resolvedCover"
           fit="cover"
           loading="lazy"
           preview-teleported
@@ -47,6 +47,7 @@
   import { useRouter } from "vue-router";
   import { Calendar, View } from "@element-plus/icons-vue";
   import dayjs from "dayjs";
+  import { resolveArticleCover } from "@/utils/article-cover";
 
   const props = defineProps({
     article: {
@@ -103,6 +104,10 @@
     if (!props.article.date) return "未知日期";
     return dayjs(props.article.date).format("YYYY-MM-DD");
   });
+
+  const resolvedCover = computed(() =>
+    resolveArticleCover(props.article.cover, props.article.id || props.article.title),
+  );
 
   // 处理点击
   const handleClick = () => {
