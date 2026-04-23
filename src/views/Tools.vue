@@ -51,7 +51,7 @@
   const categories = ["前端工具", "Java/后端", "开发辅助", "学习社区"];
   const currentCategory = ref("全部");
 
-  // 工具数据列表 (毕设建议增加 10-15 个)
+  // 工具数据列表
   const toolsList = ref([
     {
       name: "Vue.js",
