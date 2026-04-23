@@ -130,14 +130,22 @@ const searching = ref(false);
 const searchResults = ref([]);
 let searchTimer = null;
 
+const normalizeKeyword = (value) => {
+  if (Array.isArray(value)) {
+    return typeof value[0] === "string" ? value[0].trim() : "";
+  }
+
+  return typeof value === "string" ? value.trim() : "";
+};
+
 // 从路由参数获取搜索关键词
 watch(
   () => route.query.q,
   (newQuery) => {
-    const keyword = typeof newQuery === "string" ? newQuery : "";
+    const keyword = normalizeKeyword(newQuery);
     searchKeyword.value = keyword;
 
-    if (keyword.trim()) {
+    if (keyword) {
       performSearch(keyword);
     } else {
       searchResults.value = [];
@@ -153,22 +161,39 @@ const popularTags = computed(() => {
 
 // 执行搜索
 const handleSearch = () => {
-  if (!searchKeyword.value.trim()) {
+  const keyword = normalizeKeyword(searchKeyword.value);
+  if (!keyword) {
+    searchResults.value = [];
+    router.replace({ path: "/search" });
+    return;
+  }
+
+  searchKeyword.value = keyword;
+  performSearch(keyword);
+
+  if (keyword === normalizeKeyword(route.query.q)) {
     return;
   }
 
   // 更新URL参数
   router.push({
     path: "/search",
-    query: { q: searchKeyword.value.trim() },
+    query: { q: keyword },
   });
 };
 
 // 执行搜索逻辑
 async function performSearch(keyword) {
+  const normalizedKeyword = normalizeKeyword(keyword);
+  if (!normalizedKeyword) {
+    searchResults.value = [];
+    searching.value = false;
+    return;
+  }
+
   searching.value = true;
   try {
-    const results = searchArticles(keyword);
+    const results = searchArticles(normalizedKeyword);
     searchResults.value = results || [];
   } catch (error) {
     console.error("搜索失败:", error);
@@ -197,19 +222,22 @@ const clearSearch = () => {
 };
 
 watch(searchKeyword, (keyword) => {
-  if (keyword.trim() === (route.query.q || "")) {
+  const normalizedKeyword = normalizeKeyword(keyword);
+  const routeKeyword = normalizeKeyword(route.query.q);
+
+  if (normalizedKeyword === routeKeyword) {
     return;
   }
 
   clearTimeout(searchTimer);
-  if (!keyword.trim()) {
+  if (!normalizedKeyword) {
     return;
   }
 
   searchTimer = setTimeout(() => {
     router.replace({
       path: "/search",
-      query: { q: keyword.trim() },
+      query: { q: normalizedKeyword },
     });
   }, 300);
 });
