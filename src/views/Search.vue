@@ -165,7 +165,7 @@ const handleSearch = () => {
 };
 
 // 执行搜索逻辑
-const performSearch = async (keyword) => {
+async function performSearch(keyword) {
   searching.value = true;
   try {
     const results = searchArticles(keyword);
@@ -176,7 +176,7 @@ const performSearch = async (keyword) => {
   } finally {
     searching.value = false;
   }
-};
+}
 
 // 通过标签搜索
 const searchByTag = (tag) => {
