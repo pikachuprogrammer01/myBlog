@@ -144,7 +144,7 @@
             <el-table-column label="操作" width="120">
               <template #default="{ row }">
                 <el-button
-                  v-if="row.role !== 'admin'"
+                  v-if="row.role !== 'admin' && !row.isBuiltin"
                   link
                   size="small"
                   @click="promoteToAdmin(row.id)"
@@ -194,19 +194,33 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, ChatDotRound, User, View, Download, Delete, Refresh, Setting, DataAnalysis } from '@element-plus/icons-vue'
+import { HARDCODED_USERS } from '@/constants/users'
+import { STORAGE_KEYS } from '@/constants/storage-keys'
 import { useAuth } from '@/composables/useAuth'
 import { useComments } from '@/composables/useComments'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
 
-const { getCurrentUser } = useAuth()
-const { getComments, deleteComment: deleteCommentApi } = useComments()
-const { getArticles } = useArticles()
+const router = useRouter()
+const {
+  currentUser,
+  getAllUsers,
+  promoteUserToAdmin,
+  resetLocalUsers,
+  logout
+} = useAuth()
+const {
+  getAllComments,
+  deleteComment: deleteCommentApi,
+  clearAllComments: clearAllCommentsApi,
+  exportComments
+} = useComments()
+const { getArticles, getTotalViews } = useArticles()
 
 // 权限检查
-const currentUser = computed(() => getCurrentUser())
 const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
 // 数据
@@ -227,23 +241,27 @@ const loadData = () => {
   if (!isAdmin.value) return
 
   // 加载评论
-  const allComments = getComments()
+  const allComments = getAllComments({ includeDeleted: true })
   comments.value = allComments.filter(comment => !comment.isDeleted)
 
-  // 模拟用户数据
-  users.value = [
-    { id: '1', username: 'admin', role: 'admin', createdAt: Date.now() - 86400000 * 30 },
-    { id: '2', username: 'user1', role: 'user', createdAt: Date.now() - 86400000 * 7 },
-    { id: '3', username: 'user2', role: 'user', createdAt: Date.now() - 86400000 * 3 }
-  ]
+  users.value = getAllUsers().map(user => {
+    const { password, ...safeUser } = user
+
+    return {
+      ...safeUser,
+      isBuiltin: HARDCODED_USERS.some(builtinUser => builtinUser.id === user.id)
+    }
+  })
 
   // 计算统计
   stats.value = {
     totalArticles: getArticles().length,
-    totalComments: allComments.length,
+    totalComments: comments.value.length,
     totalUsers: users.value.length,
-    totalViews: 0 // 实际应从localStorage计算
+    totalViews: getTotalViews()
   }
+
+  selectedComments.value = []
 }
 
 // 表格选择变化
@@ -265,12 +283,12 @@ const deleteComment = async (commentId) => {
     )
 
     // 实际调用删除接口
-    const success = deleteCommentApi(commentId)
-    if (success) {
+    const result = deleteCommentApi(commentId)
+    if (result.success) {
       ElMessage.success('评论已删除')
       loadData()
     } else {
-      ElMessage.error('删除失败')
+      ElMessage.error(result.message || '删除失败')
     }
   } catch (error) {
     // 用户取消删除
@@ -295,8 +313,8 @@ const batchDeleteComments = async () => {
     // 批量删除
     let successCount = 0
     selectedComments.value.forEach(commentId => {
-      const success = deleteCommentApi(commentId)
-      if (success) successCount++
+      const result = deleteCommentApi(commentId)
+      if (result.success) successCount++
     })
 
     ElMessage.success(`成功删除 ${successCount} 条评论`)
@@ -318,9 +336,13 @@ const promoteToAdmin = (userId) => {
       type: 'warning'
     }
   ).then(() => {
-    // 实际应用中应调用API更新用户角色
-    ElMessage.success('用户角色已更新')
-    loadData()
+    const result = promoteUserToAdmin(userId)
+    if (result.success) {
+      ElMessage.success('用户角色已更新')
+      loadData()
+    } else {
+      ElMessage.error(result.message || '更新失败')
+    }
   }).catch(() => {
     // 取消
   })
@@ -329,7 +351,7 @@ const promoteToAdmin = (userId) => {
 // 导出数据
 const exportData = () => {
   const data = {
-    comments: comments.value,
+    comments: JSON.parse(exportComments()),
     users: users.value,
     stats: stats.value,
     exportTime: new Date().toISOString()
@@ -362,10 +384,13 @@ const clearAllComments = () => {
       confirmButtonClass: 'el-button--danger'
     }
   ).then(() => {
-    // 实际清空评论逻辑
-    localStorage.removeItem('blog_comments')
-    ElMessage.success('所有评论已清空')
-    loadData()
+    const result = clearAllCommentsApi()
+    if (result.success) {
+      ElMessage.success('所有评论已清空')
+      loadData()
+    } else {
+      ElMessage.error(result.message || '清空失败')
+    }
   }).catch(() => {
     // 取消
   })
@@ -383,12 +408,16 @@ const resetAllData = () => {
       confirmButtonClass: 'el-button--danger'
     }
   ).then(() => {
-    // 实际重置逻辑
-    localStorage.removeItem('blog_comments')
-    localStorage.removeItem('blog_auth_token')
-    localStorage.removeItem('blog_users')
+    localStorage.removeItem(STORAGE_KEYS.COMMENTS)
+    localStorage.removeItem(STORAGE_KEYS.ARTICLE_VIEWS)
+    localStorage.removeItem(STORAGE_KEYS.ARTICLE_LIKES)
+    localStorage.removeItem(STORAGE_KEYS.LIKED_ARTICLES)
+    localStorage.removeItem(STORAGE_KEYS.BOOKMARKS)
+    localStorage.removeItem(STORAGE_KEYS.CONTACT_MESSAGES)
+    resetLocalUsers()
+    logout()
     ElMessage.success('所有数据已重置')
-    loadData()
+    router.push('/')
   }).catch(() => {
     // 取消
   })

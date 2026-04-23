@@ -26,7 +26,7 @@
               <el-icon><ChatDotRound /></el-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ commentStats.active || 0 }}</div>
+              <div class="stat-value">{{ myComments.length }}</div>
               <div class="stat-label">我的评论</div>
             </div>
           </div>
@@ -62,7 +62,13 @@
         </div>
         <div v-else>
           <el-table :data="myComments" style="width: 100%">
-            <el-table-column prop="articleId" label="文章ID" width="100" />
+            <el-table-column prop="articleTitle" label="文章标题" min-width="200">
+              <template #default="{ row }">
+                <router-link :to="`/article/${row.articleId}`">
+                  {{ row.articleTitle }}
+                </router-link>
+              </template>
+            </el-table-column>
             <el-table-column prop="content" label="评论内容" />
             <el-table-column prop="createdAt" label="评论时间" width="180">
               <template #default="{ row }">
@@ -77,20 +83,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuth } from '@/composables/useAuth'
 import { useComments } from '@/composables/useComments'
+import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
 import { User, ChatDotRound, Calendar } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const { getCurrentUser, logout } = useAuth()
-const { getStats } = useComments()
-
-const user = computed(() => getCurrentUser())
-const commentStats = computed(() => getStats())
+const { currentUser: user, logout } = useAuth()
+const { getMyComments } = useComments()
+const { getArticle } = useArticles()
 
 // 用户头像（模拟）
 const userAvatar = computed(() => {
@@ -102,27 +107,23 @@ const roleText = computed(() => {
   return user.value?.role === 'admin' ? '管理员' : '普通用户'
 })
 
-// 注册天数（模拟）
+// 注册天数
 const registrationDays = computed(() => {
-  // 模拟注册时间：7天前
-  return 7
+  if (!user.value?.createdAt) {
+    return 1
+  }
+
+  const createdAt = new Date(user.value.createdAt).getTime()
+  const diff = Math.ceil((Date.now() - createdAt) / 86400000)
+  return Math.max(diff, 1)
 })
 
-// 我的评论（模拟数据，实际应从评论store中获取）
-const myComments = ref([
-  {
-    id: '1',
-    articleId: 'hello-world',
-    content: '写得很好，学到了很多！',
-    createdAt: Date.now() - 86400000 // 1天前
-  },
-  {
-    id: '2',
-    articleId: 'vue3-composition-api',
-    content: 'Composition API确实比Options API好用',
-    createdAt: Date.now() - 172800000 // 2天前
-  }
-])
+const myComments = computed(() => {
+  return getMyComments().map(comment => ({
+    ...comment,
+    articleTitle: getArticle(comment.articleId)?.title || comment.articleId
+  }))
+})
 
 // 退出登录
 const handleLogout = () => {

@@ -1,5 +1,5 @@
 <template>
-  <div class="comment-form">
+  <div ref="commentFormRoot" class="comment-form">
     <!-- 登录提示 -->
     <div v-if="!isLoggedIn" class="login-prompt">
       <el-alert
@@ -146,7 +146,7 @@
               :disabled="!form.content.trim()"
               @click="handleSubmit"
             >
-              {{ submitButtonText }}
+              {{ computedSubmitButtonText }}
             </el-button>
             <el-button v-if="showClearButton" @click="handleClear">
               清空
@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, reactive, watch } from "vue";
+  import { ref, computed, reactive, watch, nextTick } from "vue";
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Link, Comment } from "@element-plus/icons-vue";
   import { useAuth } from "@/composables/useAuth";
@@ -242,9 +242,10 @@
   const emit = defineEmits(["submit", "cancel"]);
 
   const { getCurrentUser } = useAuth();
-  const { addComment, updateComment } = useComments();
+  const { addComment, updateComment, getComment } = useComments();
 
   // 响应式状态
+  const commentFormRoot = ref(null);
   const formRef = ref(null);
   const form = reactive({
     content: "",
@@ -322,6 +323,10 @@
     return props.submitButtonText;
   });
 
+  const getTextarea = () => {
+    return commentFormRoot.value?.querySelector("textarea") || null;
+  };
+
   // 处理内容变化
   const handleContentChange = (value) => {
     // 检测光标位置和选中的文本，更新编辑器状态
@@ -330,7 +335,7 @@
 
   // 切换Markdown格式
   const toggleMarkdown = (type) => {
-    const textarea = document.querySelector(".comment-form-content textarea");
+    const textarea = getTextarea();
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -371,7 +376,7 @@
 
   // 插入链接
   const insertLink = () => {
-    const textarea = document.querySelector(".comment-form-content textarea");
+    const textarea = getTextarea();
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -400,7 +405,7 @@
 
   // 插入代码
   const insertCode = () => {
-    const textarea = document.querySelector(".comment-form-content textarea");
+    const textarea = getTextarea();
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -413,7 +418,7 @@
       inputPlaceholder: "javascript, python, html...",
     })
       .then(({ value }) => {
-        const language = value.trim();
+        const language = value?.trim() || "";
         const codeBlock = language
           ? `\`\`\`${language}\n${selectedText}\n\`\`\``
           : `\`${selectedText}\``;
@@ -532,30 +537,39 @@
     () => props.editCommentId,
     (newId) => {
       if (newId) {
-        // 加载要编辑的评论内容
-        // 这里需要从store中获取评论数据
-        // 暂时留空
+        const targetComment = getComment(newId);
+        if (targetComment) {
+          form.content = targetComment.content;
+          form.options.notify = targetComment.options?.notify !== false;
+          form.options.sticky = !!targetComment.options?.sticky;
+        }
+      } else {
+        form.content = "";
+        form.options.notify = true;
+        form.options.sticky = false;
       }
     },
     { immediate: true },
   );
 
   // 自动聚焦
-  const autoFocusTextarea = () => {
+  const autoFocusTextarea = async () => {
     if (props.autoFocus) {
-      setTimeout(() => {
-        const textarea = document.querySelector(
-          ".comment-form-content textarea",
-        );
-        if (textarea) {
-          textarea.focus();
-        }
-      }, 100);
+      await nextTick();
+      const textarea = getTextarea();
+      if (textarea) {
+        textarea.focus();
+      }
     }
   };
 
-  // 初始化
-  autoFocusTextarea();
+  watch(
+    () => [props.autoFocus, props.parentId, props.editCommentId],
+    () => {
+      autoFocusTextarea();
+    },
+    { immediate: true },
+  );
 </script>
 
 <style scoped lang="scss">

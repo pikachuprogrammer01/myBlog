@@ -1,68 +1,137 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { STORAGE_KEYS } from '@/constants/storage-keys'
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { STORAGE_KEYS } from "@/constants/storage-keys";
 
-export const useCommentStore = defineStore('comment', () => {
-  const comments = ref([])
+const normalizeComment = (comment) => {
+  const createdAt = Number(comment.createdAt) || Date.now();
+  const updatedAt = Number(comment.updatedAt) || createdAt;
+
+  return {
+    id: comment.id,
+    articleId: comment.articleId,
+    parentId: comment.parentId || null,
+    userId: comment.userId,
+    username: comment.username || "匿名用户",
+    userRole: comment.userRole || "user",
+    content: comment.content || "",
+    options: {
+      notify: comment.options?.notify !== false,
+      sticky: !!comment.options?.sticky,
+    },
+    createdAt,
+    updatedAt,
+    isDeleted: !!comment.isDeleted,
+    likes: Number(comment.likes) || 0,
+    likedBy: Array.isArray(comment.likedBy) ? comment.likedBy : [],
+  };
+};
+
+const sortComments = (commentList) => {
+  return [...commentList].sort((leftComment, rightComment) => {
+    const stickyDifference =
+      Number(rightComment.options?.sticky) -
+      Number(leftComment.options?.sticky);
+
+    if (stickyDifference !== 0) {
+      return stickyDifference;
+    }
+
+    return rightComment.createdAt - leftComment.createdAt;
+  });
+};
+
+export const useCommentStore = defineStore("comment", () => {
+  const comments = ref([]);
 
   // 加载评论
   const loadComments = () => {
-    const stored = localStorage.getItem(STORAGE_KEYS.COMMENTS)
-    comments.value = stored ? JSON.parse(stored) : []
-  }
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(STORAGE_KEYS.COMMENTS) || "[]",
+      );
+      comments.value = Array.isArray(stored)
+        ? stored.map(normalizeComment)
+        : [];
+    } catch (error) {
+      console.error("Failed to parse comments:", error);
+      comments.value = [];
+    }
+  };
 
   // 保存到localStorage
   const saveComments = () => {
-    localStorage.setItem(STORAGE_KEYS.COMMENTS, JSON.stringify(comments.value))
-  }
+    localStorage.setItem(STORAGE_KEYS.COMMENTS, JSON.stringify(comments.value));
+  };
 
   // 生成ID
   const generateId = () => {
-    return `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  }
+    return `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  const getAllComments = ({ includeDeleted = false } = {}) => {
+    const allComments = includeDeleted
+      ? comments.value
+      : comments.value.filter((comment) => !comment.isDeleted);
+
+    return sortComments(allComments);
+  };
 
   // 获取文章评论（扁平结构，按时间倒序）
   const getArticleComments = (articleId) => {
-    return comments.value.filter(
-      comment => comment.articleId === articleId && !comment.isDeleted
-    ).sort((a, b) => b.createdAt - a.createdAt)
-  }
+    return sortComments(
+      comments.value.filter(
+        (comment) => comment.articleId === articleId && !comment.isDeleted,
+      ),
+    );
+  };
 
   // 获取评论的回复
   const getCommentReplies = (commentId) => {
-    return comments.value.filter(
-      comment => comment.parentId === commentId && !comment.isDeleted
-    ).sort((a, b) => a.createdAt - b.createdAt)
-  }
+    return comments.value
+      .filter((comment) => comment.parentId === commentId && !comment.isDeleted)
+      .sort((a, b) => a.createdAt - b.createdAt);
+  };
 
   // 获取评论树（嵌套结构）
   const getCommentTree = (articleId) => {
-    const allComments = getArticleComments(articleId)
-    const commentMap = {}
-    const rootComments = []
+    const allComments = getArticleComments(articleId);
+    const commentMap = {};
+    const rootComments = [];
 
     // 构建映射
-    allComments.forEach(comment => {
-      commentMap[comment.id] = { ...comment, replies: [] }
-    })
+    allComments.forEach((comment) => {
+      commentMap[comment.id] = { ...comment, replies: [] };
+    });
 
     // 构建树
-    allComments.forEach(comment => {
+    allComments.forEach((comment) => {
       if (comment.parentId) {
-        const parent = commentMap[comment.parentId]
+        const parent = commentMap[comment.parentId];
         if (parent) {
-          parent.replies.push(commentMap[comment.id])
+          parent.replies.push(commentMap[comment.id]);
         } else {
           // 父评论可能已被删除，作为根评论处理
-          rootComments.push(commentMap[comment.id])
+          rootComments.push(commentMap[comment.id]);
         }
       } else {
-        rootComments.push(commentMap[comment.id])
+        rootComments.push(commentMap[comment.id]);
       }
-    })
+    });
 
-    return rootComments
-  }
+    return sortComments(rootComments).map((comment) => ({
+      ...comment,
+      replies: [...comment.replies].sort((leftReply, rightReply) => {
+        return leftReply.createdAt - rightReply.createdAt;
+      }),
+    }));
+  };
+
+  const getCommentById = (commentId) => {
+    const targetComment = comments.value.find(
+      (comment) => comment.id === commentId,
+    );
+    return targetComment ? normalizeComment(targetComment) : null;
+  };
 
   // 添加评论
   const addComment = (commentData) => {
@@ -72,164 +141,178 @@ export const useCommentStore = defineStore('comment', () => {
       userId,
       username,
       parentId = null,
-      options = {}
-    } = commentData
+      options = {},
+    } = commentData;
 
-    const newComment = {
+    if (!articleId || !content?.trim()) {
+      return { success: false, message: "评论内容不能为空" };
+    }
+
+    const newComment = normalizeComment({
       id: generateId(),
       articleId,
       parentId,
       userId,
       username,
+      userRole: commentData.userRole || "user",
       content,
-      options: {
-        notify: options.notify !== undefined ? options.notify : true,
-        sticky: options.sticky || false
-      },
       createdAt: Date.now(),
       updatedAt: Date.now(),
       isDeleted: false,
       likes: 0,
-      likedBy: []
-    }
+      likedBy: [],
+      options,
+    });
 
-    comments.value.push(newComment)
-    saveComments()
-    return { success: true, comment: newComment }
-  }
+    comments.value.push(newComment);
+    saveComments();
+    return { success: true, comment: newComment };
+  };
 
   // 更新评论
   const updateComment = (commentId, updates) => {
-    const index = comments.value.findIndex(c => c.id === commentId)
+    const index = comments.value.findIndex((c) => c.id === commentId);
     if (index === -1) {
-      return { success: false, message: '评论不存在' }
+      return { success: false, message: "评论不存在" };
     }
 
     comments.value[index] = {
-      ...comments.value[index],
+      ...normalizeComment(comments.value[index]),
       ...updates,
-      updatedAt: Date.now()
-    }
+      content:
+        typeof updates.content === "string"
+          ? updates.content.trim()
+          : comments.value[index].content,
+      updatedAt: Date.now(),
+    };
 
-    saveComments()
-    return { success: true, comment: comments.value[index] }
-  }
+    saveComments();
+    return { success: true, comment: comments.value[index] };
+  };
 
   // 删除评论（软删除）
   const deleteComment = (commentId) => {
-    const index = comments.value.findIndex(c => c.id === commentId)
+    const index = comments.value.findIndex((c) => c.id === commentId);
     if (index !== -1) {
-      comments.value[index].isDeleted = true
-      comments.value[index].updatedAt = Date.now()
-      saveComments()
-      return { success: true }
+      comments.value[index].isDeleted = true;
+      comments.value[index].updatedAt = Date.now();
+      saveComments();
+      return { success: true };
     }
-    return { success: false, message: '评论不存在' }
-  }
+    return { success: false, message: "评论不存在" };
+  };
 
   // 永久删除评论（管理员功能）
   const permanentDeleteComment = (commentId) => {
-    const index = comments.value.findIndex(c => c.id === commentId)
+    const index = comments.value.findIndex((c) => c.id === commentId);
     if (index !== -1) {
-      comments.value.splice(index, 1)
-      saveComments()
-      return { success: true }
+      comments.value.splice(index, 1);
+      saveComments();
+      return { success: true };
     }
-    return { success: false, message: '评论不存在' }
-  }
+    return { success: false, message: "评论不存在" };
+  };
 
   // 置顶/取消置顶评论（管理员功能）
   const toggleCommentSticky = (commentId) => {
-    const index = comments.value.findIndex(c => c.id === commentId)
+    const index = comments.value.findIndex((c) => c.id === commentId);
     if (index === -1) {
-      return { success: false, message: '评论不存在' }
+      return { success: false, message: "评论不存在" };
     }
 
-    comments.value[index].options.sticky = !comments.value[index].options.sticky
-    comments.value[index].updatedAt = Date.now()
-    saveComments()
+    comments.value[index].options.sticky =
+      !comments.value[index].options.sticky;
+    comments.value[index].updatedAt = Date.now();
+    saveComments();
     return {
       success: true,
-      sticky: comments.value[index].options.sticky
-    }
-  }
+      sticky: comments.value[index].options.sticky,
+    };
+  };
 
   // 点赞评论
   const likeComment = (commentId, userId) => {
-    const index = comments.value.findIndex(c => c.id === commentId)
+    const index = comments.value.findIndex((c) => c.id === commentId);
     if (index === -1) {
-      return { success: false, message: '评论不存在' }
+      return { success: false, message: "评论不存在" };
     }
 
-    const comment = comments.value[index]
-    const likedIndex = comment.likedBy.indexOf(userId)
+    const comment = comments.value[index];
+    const likedIndex = comment.likedBy.indexOf(userId);
 
     if (likedIndex === -1) {
-      comment.likes += 1
-      comment.likedBy.push(userId)
+      comment.likes += 1;
+      comment.likedBy.push(userId);
     } else {
-      comment.likes -= 1
-      comment.likedBy.splice(likedIndex, 1)
+      comment.likes -= 1;
+      comment.likedBy.splice(likedIndex, 1);
     }
 
-    comment.updatedAt = Date.now()
-    saveComments()
-    return { success: true, likes: comment.likes, liked: likedIndex === -1 }
-  }
+    comment.updatedAt = Date.now();
+    saveComments();
+    return { success: true, likes: comment.likes, liked: likedIndex === -1 };
+  };
 
   // 获取评论统计
   const getCommentStats = computed(() => {
-    const total = comments.value.length
-    const active = comments.value.filter(c => !c.isDeleted).length
-    const deleted = total - active
-    const sticky = comments.value.filter(c => c.options.sticky).length
+    const total = comments.value.length;
+    const active = comments.value.filter((c) => !c.isDeleted).length;
+    const deleted = total - active;
+    const sticky = comments.value.filter((c) => c.options.sticky).length;
+    const replies = comments.value.filter(
+      (comment) => comment.parentId && !comment.isDeleted,
+    ).length;
 
-    return { total, active, deleted, sticky }
-  })
+    return { total, active, deleted, sticky, replies };
+  });
 
   // 获取用户评论
   const getUserComments = (userId) => {
-    return comments.value.filter(
-      comment => comment.userId === userId && !comment.isDeleted
-    ).sort((a, b) => b.createdAt - a.createdAt)
-  }
+    return sortComments(
+      comments.value.filter(
+        (comment) => comment.userId === userId && !comment.isDeleted,
+      ),
+    );
+  };
 
   // 清空所有评论（Admin功能）
   const clearAllComments = () => {
-    comments.value = []
-    saveComments()
-    return { success: true }
-  }
+    comments.value = [];
+    saveComments();
+    return { success: true };
+  };
 
   // 导出评论数据
   const exportComments = () => {
-    return JSON.stringify(comments.value, null, 2)
-  }
+    return JSON.stringify(comments.value, null, 2);
+  };
 
   // 导入评论数据
   const importComments = (data) => {
     try {
-      const parsed = JSON.parse(data)
+      const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        comments.value = parsed
-        saveComments()
-        return { success: true, count: parsed.length }
+        comments.value = parsed.map(normalizeComment);
+        saveComments();
+        return { success: true, count: comments.value.length };
       }
-      return { success: false, message: '数据格式错误' }
+      return { success: false, message: "数据格式错误" };
     } catch (error) {
-      return { success: false, message: '解析数据失败' }
+      return { success: false, message: "解析数据失败" };
     }
-  }
+  };
 
   // 初始化加载
-  loadComments()
+  loadComments();
 
   return {
     comments,
     loadComments,
+    getAllComments,
     getArticleComments,
     getCommentReplies,
     getCommentTree,
+    getCommentById,
     addComment,
     updateComment,
     deleteComment,
@@ -240,6 +323,6 @@ export const useCommentStore = defineStore('comment', () => {
     clearAllComments,
     exportComments,
     importComments,
-    getCommentStats
-  }
-})
+    getCommentStats,
+  };
+});

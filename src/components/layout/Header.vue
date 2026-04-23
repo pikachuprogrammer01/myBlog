@@ -15,8 +15,20 @@
         <router-link to="/archive" class="nav-link">
           <el-icon><Folder /></el-icon> 归档
         </router-link>
+        <router-link to="/categories" class="nav-link">
+          <el-icon><Folder /></el-icon>
+          文章分类
+        </router-link>
         <router-link to="/tags" class="nav-link">
           <el-icon><PriceTag /></el-icon> 标签
+        </router-link>
+        <router-link to="/tools" class="nav-link">
+          <el-icon><Tools /></el-icon>
+          实用工具
+        </router-link>
+        <router-link to="/about" class="nav-link">
+          <el-icon><User /></el-icon>
+          关于我
         </router-link>
       </nav>
 
@@ -39,7 +51,7 @@
               type="primary"
               circle
               :icon="CirclePlus"
-              @click="router.push('/admin/write')"
+              @click="router.push('/admin')"
               class="write-btn"
             />
 
@@ -87,7 +99,7 @@
 
 <script setup>
   import { ref, computed, onMounted, onUnmounted } from "vue";
-  import { useRoute, useRouter } from "vue-router";
+  import { useRouter } from "vue-router";
   import { ElMessage } from "element-plus";
   import {
     HomeFilled,
@@ -103,25 +115,20 @@
   } from "@element-plus/icons-vue";
   import { useAuth } from "@/composables/useAuth";
 
-  const route = useRoute();
   const router = useRouter();
   const {
-    getCurrentUser,
+    currentUser,
     logout: authLogout,
     isAuthenticated,
     isAdmin,
   } = useAuth();
 
   const searchQuery = ref("");
-  const showSearchDialog = ref(false);
-
-  // 用户信息
-  const currentUser = computed(() => getCurrentUser());
 
   // 用户头像（模拟）
   const userAvatar = computed(() => {
     if (!currentUser.value) return "";
-    return `https://api.dicebear.com/7.x/pixel-art/svg?seed=Gemini`;
+    return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${currentUser.value.username}`;
   });
 
   // 搜索处理
@@ -132,17 +139,6 @@
     }
     router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
     searchQuery.value = "";
-  };
-
-  // 移动端搜索处理
-  const handleMobileSearch = () => {
-    if (!searchQuery.value.trim()) {
-      ElMessage.warning("请输入搜索关键词");
-      return;
-    }
-    router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
-    searchQuery.value = "";
-    showSearchDialog.value = false;
   };
 
   // 用户菜单命令处理

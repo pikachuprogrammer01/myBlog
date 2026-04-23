@@ -47,7 +47,12 @@
           <p>暂无文章归档数据</p>
         </div>
         <div v-else class="timeline-container">
-          <div v-for="yearData in archiveData" :key="yearData.year" class="year-section">
+          <div
+            v-for="yearData in archiveData"
+            :key="yearData.year"
+            class="year-section"
+            :data-year="yearData.year"
+          >
             <div class="year-header">
               <h4>
                 <el-icon><Calendar /></el-icon>
@@ -117,19 +122,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useArticles } from '@/composables/useArticles'
-import { formatDate } from '@/utils/date'
 import {
   Calendar,
   Document,
   PriceTag,
   DataAnalysis,
   Clock,
-  Folder
 } from '@element-plus/icons-vue'
 
-const { getArticles, getArchive } = useArticles()
+const router = useRouter()
+const { getArticles } = useArticles()
 
 // 获取所有文章
 const allArticles = computed(() => getArticles())
@@ -225,7 +230,10 @@ const formatDay = (dateString) => {
 
 // 跳转到标签页面
 const navigateToTag = (tag) => {
-  window.location.href = `/tags?tag=${encodeURIComponent(tag)}`
+  router.push({
+    path: '/tags',
+    query: { tag }
+  })
 }
 
 // 滚动到指定年份

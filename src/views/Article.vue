@@ -188,7 +188,11 @@
       <comment-list
         ref="commentListRef"
         :article-id="articleId"
+        :sort-mode="commentSort"
+        :show-sort-options="false"
         class="comment-list"
+        @comment-deleted="handleCommentMutation"
+        @reply-submitted="handleCommentMutation"
       />
 
       <!-- 评论表单 -->
@@ -221,7 +225,9 @@ import {
   Printer
 } from '@element-plus/icons-vue'
 import { useArticleStore } from '@/stores/article'
+import { STORAGE_KEYS } from '@/constants/storage-keys'
 import { useAuth } from '@/composables/useAuth'
+import { useArticles } from '@/composables/useArticles'
 import { useComments } from '@/composables/useComments'
 import MarkdownRenderer from '@/components/blog/MarkdownRenderer.vue'
 import CommentList from '@/components/blog/CommentList.vue'
@@ -231,7 +237,9 @@ import dayjs from 'dayjs'
 const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
-const { getCurrentUser } = useAuth()
+const { currentUser } = useAuth()
+const { getArticle, incrementViewCount, getArticleLikeCount, setArticleLikeCount } =
+  useArticles()
 const { getCommentsCount } = useComments()
 
 // 路由参数
@@ -250,8 +258,35 @@ const commentSort = ref('latest')
 const commentListRef = ref(null)
 
 // 用户信息
-const currentUser = computed(() => getCurrentUser())
 const isAdmin = computed(() => currentUser.value?.role === 'admin')
+
+const readStoredMap = (key) => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) || '{}')
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}
+  } catch (error) {
+    console.error(`读取 ${key} 失败:`, error)
+    return {}
+  }
+}
+
+const writeStoredMap = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+const getScopedArticleList = (key) => {
+  const scopedMap = readStoredMap(key)
+  const scopedUserId = currentUser.value?.id || 'guest'
+  const scopedList = scopedMap[scopedUserId]
+  return Array.isArray(scopedList) ? scopedList : []
+}
+
+const setScopedArticleList = (key, value) => {
+  const scopedMap = readStoredMap(key)
+  const scopedUserId = currentUser.value?.id || 'guest'
+  scopedMap[scopedUserId] = value
+  writeStoredMap(key, scopedMap)
+}
 
 // 格式化日期
 const formatDate = (date) => {
@@ -265,25 +300,26 @@ const loadArticle = async () => {
 
   try {
     // 获取文章详情
-    article.value = articleStore.getArticleById(articleId.value)
+    article.value = getArticle(articleId.value)
 
     if (article.value) {
       // 增加阅读量
-      articleStore.incrementViews(articleId.value)
+      const views = incrementViewCount(articleId.value)
+      article.value = {
+        ...getArticle(articleId.value),
+        views,
+        likes: getArticleLikeCount(articleId.value)
+      }
 
       // 获取上一篇/下一篇
       const { previous, next } = articleStore.getPreviousNextArticles(articleId.value)
       previousArticle.value = previous
       nextArticle.value = next
 
-      // 初始化点赞状态（从localStorage获取）
-      const likedArticles = JSON.parse(localStorage.getItem('blog_liked_articles') || '[]')
+      const likedArticles = getScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES)
       liked.value = likedArticles.includes(articleId.value)
-      likeCount.value = article.value.likes || 0
-
-      // 获取评论数量
-      const comments = getCommentsCount(articleId.value)
-      commentCount.value = comments
+      likeCount.value = getArticleLikeCount(articleId.value)
+      commentCount.value = getCommentsCount(articleId.value)
     }
   } catch (error) {
     console.error('加载文章失败:', error)
@@ -351,28 +387,29 @@ const handleLike = async () => {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 300))
 
-    let likedArticles = JSON.parse(localStorage.getItem('blog_liked_articles') || '[]')
+    const likedArticles = [...getScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES)]
     const index = likedArticles.indexOf(articleId.value)
 
     if (index === -1) {
       // 点赞
       likedArticles.push(articleId.value)
       liked.value = true
-      likeCount.value += 1
+      likeCount.value = setArticleLikeCount(articleId.value, likeCount.value + 1)
       ElMessage.success('点赞成功')
     } else {
       // 取消点赞
       likedArticles.splice(index, 1)
       liked.value = false
-      likeCount.value = Math.max(0, likeCount.value - 1)
+      likeCount.value = setArticleLikeCount(
+        articleId.value,
+        Math.max(0, likeCount.value - 1)
+      )
       ElMessage.info('已取消点赞')
     }
 
-    localStorage.setItem('blog_liked_articles', JSON.stringify(likedArticles))
+    setScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES, likedArticles)
 
-    // 更新文章的点赞数（这里只是前端演示，实际应该调用API）
     if (article.value) {
-      if (!article.value.likes) article.value.likes = 0
       article.value.likes = likeCount.value
     }
   } catch (error) {
@@ -409,10 +446,16 @@ const handleMoreCommand = (command) => {
       window.print()
       break
     case 'bookmark':
-      let bookmarks = JSON.parse(localStorage.getItem('blog_bookmarks') || '[]')
+      if (!currentUser.value) {
+        ElMessage.warning('请先登录后再收藏文章')
+        router.push('/login')
+        return
+      }
+
+      const bookmarks = [...getScopedArticleList(STORAGE_KEYS.BOOKMARKS)]
       if (!bookmarks.includes(articleId.value)) {
         bookmarks.push(articleId.value)
-        localStorage.setItem('blog_bookmarks', JSON.stringify(bookmarks))
+        setScopedArticleList(STORAGE_KEYS.BOOKMARKS, bookmarks)
         ElMessage.success('已收藏文章')
       } else {
         ElMessage.info('文章已在收藏夹中')
@@ -437,9 +480,14 @@ const handleCommentSubmit = () => {
     commentListRef.value.refreshComments()
   }
   // 更新评论数量
-  const comments = getCommentsCount(articleId.value)
-  commentCount.value = comments
-  ElMessage.success('评论已发布')
+  commentCount.value = getCommentsCount(articleId.value)
+}
+
+const handleCommentMutation = () => {
+  if (commentListRef.value) {
+    commentListRef.value.refreshComments()
+  }
+  commentCount.value = getCommentsCount(articleId.value)
 }
 
 // 监听路由变化
@@ -448,6 +496,15 @@ watch(() => route.params.id, (newId) => {
     loadArticle()
   }
 }, { immediate: false })
+
+watch(
+  () => currentUser.value?.id,
+  () => {
+    liked.value = getScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES).includes(
+      articleId.value
+    )
+  }
+)
 
 // 生命周期
 onMounted(() => {

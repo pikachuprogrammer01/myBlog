@@ -53,7 +53,7 @@
     <div v-else class="comments-container">
       <transition-group name="comment-list">
         <div
-          v-for="comment in sortedComments"
+          v-for="comment in paginatedComments"
           :key="comment.id"
           class="comment-item"
           :class="{ 'comment-selected': selectedComments.includes(comment.id) }"
@@ -162,7 +162,7 @@
                     <strong>{{ reply.username }}</strong>
                     <span class="reply-time">{{ formatTime(reply.createdAt) }}</span>
                   </div>
-                  <div class="reply-content">{{ reply.content }}</div>
+                  <div class="reply-content" v-html="formatContent(reply.content)" />
                 </div>
               </div>
             </div>
@@ -219,7 +219,7 @@
       <el-pagination
         v-model:current-page="currentPage"
         :page-size="pageSize"
-        :total="totalComments"
+        :total="sortedComments.length"
         layout="prev, pager, next"
         @current-change="handlePageChange"
       />
@@ -274,6 +274,11 @@ const props = defineProps({
     type: Boolean,
     default: true
   },
+  // 外部排序方式
+  sortMode: {
+    type: String,
+    default: ''
+  },
   // 每页评论数
   pageSize: {
     type: Number,
@@ -288,8 +293,8 @@ const props = defineProps({
 
 const emit = defineEmits(['comment-deleted', 'comment-liked', 'reply-submitted'])
 
-const { getCurrentUser } = useAuth()
-const { getComments, deleteComment, likeComment } = useComments()
+const { currentUser, getAllUsers } = useAuth()
+const { getCommentTree, deleteComment, likeComment } = useComments()
 
 // 响应式状态
 const comments = ref([])
@@ -298,29 +303,43 @@ const loading = ref(false)
 const sortBy = ref('latest')
 const currentPage = ref(1)
 
-// 用户信息
-const currentUser = computed(() => getCurrentUser())
 const isAdmin = computed(() => currentUser.value?.role === 'admin')
+const activeSortMode = computed(() => props.sortMode || sortBy.value)
 
 // 计算属性
-const totalComments = computed(() => comments.value.length)
+const flattenComments = (commentTree) => {
+  return commentTree.flatMap(comment => [comment, ...(comment.replies || [])])
+}
+
+const totalComments = computed(() => flattenComments(comments.value).length)
 
 const filteredComments = computed(() => {
-  return comments.value.filter(comment => !comment.isDeleted)
+  return comments.value
 })
 
 const sortedComments = computed(() => {
   const sorted = [...filteredComments.value]
-  if (sortBy.value === 'latest') {
-    return sorted.sort((a, b) => b.createdAt - a.createdAt)
-  } else if (sortBy.value === 'oldest') {
+
+  if (activeSortMode.value === 'oldest') {
     return sorted.sort((a, b) => a.createdAt - b.createdAt)
   }
-  return sorted
+
+  if (activeSortMode.value === 'hottest') {
+    return sorted.sort((a, b) => {
+      const likeDifference = (b.likes || 0) - (a.likes || 0)
+      if (likeDifference !== 0) {
+        return likeDifference
+      }
+
+      return b.createdAt - a.createdAt
+    })
+  }
+
+  return sorted.sort((a, b) => b.createdAt - a.createdAt)
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(totalComments.value / props.pageSize)
+  return Math.ceil(sortedComments.value.length / props.pageSize)
 })
 
 const paginatedComments = computed(() => {
@@ -328,6 +347,33 @@ const paginatedComments = computed(() => {
   const end = start + props.pageSize
   return sortedComments.value.slice(start, end)
 })
+
+const resolveUserRole = (comment) => {
+  if (comment.userRole) {
+    return comment.userRole
+  }
+
+  return getAllUsers().find(targetUser => targetUser.id === comment.userId)?.role || 'user'
+}
+
+const decorateReplies = (replyList = []) => {
+  return replyList.map(reply => ({
+    ...reply,
+    isAdmin: resolveUserRole(reply) === 'admin',
+    liked: currentUser.value ? reply.likedBy?.includes(currentUser.value.id) : false
+  }))
+}
+
+const decorateComment = (comment) => {
+  return {
+    ...comment,
+    checked: selectedComments.value.includes(comment.id),
+    showReplyForm: false,
+    isAdmin: resolveUserRole(comment) === 'admin',
+    liked: currentUser.value ? comment.likedBy?.includes(currentUser.value.id) : false,
+    replies: decorateReplies(comment.replies)
+  }
+}
 
 // 获取用户头像
 const getUserAvatar = (username) => {
@@ -395,12 +441,12 @@ const canDeleteComment = (comment) => {
 const loadComments = () => {
   loading.value = true
   try {
-    const articleComments = getComments(props.articleId)
-    comments.value = articleComments.map(comment => ({
-      ...comment,
-      checked: false,
-      showReplyForm: false
-    }))
+    const articleComments = getCommentTree(props.articleId)
+    comments.value = articleComments.map(decorateComment)
+    const maxPage = Math.max(1, totalPages.value || 1)
+    if (currentPage.value > maxPage) {
+      currentPage.value = maxPage
+    }
   } catch (error) {
     console.error('加载评论失败:', error)
     ElMessage.error('加载评论失败')
@@ -558,6 +604,15 @@ watch(() => props.articleId, () => {
   currentPage.value = 1
   selectedComments.value = []
 })
+
+watch(
+  () => currentUser.value?.id,
+  () => {
+    if (props.autoLoad) {
+      loadComments()
+    }
+  }
+)
 
 // 生命周期
 onMounted(() => {

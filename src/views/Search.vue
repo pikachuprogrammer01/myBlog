@@ -39,7 +39,11 @@
         </div>
 
         <div class="results-list">
-          <div v-for="article in searchResults" :key="article.id" class="article-item">
+          <div
+            v-for="article in searchResults"
+            :key="article.id"
+            class="article-item"
+          >
             <router-link :to="`/article/${article.id}`" class="article-title">
               <el-icon><Document /></el-icon>
               {{ article.title }}
@@ -104,82 +108,115 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { useArticles } from '@/composables/useArticles'
-import { useRoute, useRouter } from 'vue-router'
-import { Search, Document, Calendar, PriceTag, Close, List } from '@element-plus/icons-vue'
-import { formatDate } from '@/utils/date'
+import { ref, computed, watch, onUnmounted } from "vue";
+import { useArticles } from "@/composables/useArticles";
+import { useRoute, useRouter } from "vue-router";
+import {
+  Search,
+  Document,
+  Calendar,
+  PriceTag,
+  Close,
+  List,
+} from "@element-plus/icons-vue";
+import { formatDate } from "@/utils/date";
 
-const route = useRoute()
-const router = useRouter()
-const { searchArticles, getPopularTags } = useArticles()
+const route = useRoute();
+const router = useRouter();
+const { searchArticles, getPopularTags } = useArticles();
 
-const searchKeyword = ref('')
-const searching = ref(false)
-const searchResults = ref([])
+const searchKeyword = ref("");
+const searching = ref(false);
+const searchResults = ref([]);
+let searchTimer = null;
 
 // 从路由参数获取搜索关键词
-watch(() => route.query.q, (newQuery) => {
-  if (newQuery) {
-    searchKeyword.value = newQuery
-    performSearch(newQuery)
-  }
-}, { immediate: true })
+watch(
+  () => route.query.q,
+  (newQuery) => {
+    const keyword = typeof newQuery === "string" ? newQuery : "";
+    searchKeyword.value = keyword;
 
-// 热门标签（模拟数据）
+    if (keyword.trim()) {
+      performSearch(keyword);
+    } else {
+      searchResults.value = [];
+    }
+  },
+  { immediate: true },
+);
+
 const popularTags = computed(() => {
-  // 实际应从getPopularTags获取
-  const tags = getPopularTags()
-  if (Array.isArray(tags)) {
-    return tags.slice(0, 10).map(tag => tag.tag)
-  }
-  return ['Vue 3', 'JavaScript', '前端', 'CSS', 'Node.js', 'TypeScript', 'Element Plus', 'Vite']
-})
+  const tags = getPopularTags();
+  return Array.isArray(tags) ? tags.slice(0, 10).map((tag) => tag.tag) : [];
+});
 
 // 执行搜索
 const handleSearch = () => {
   if (!searchKeyword.value.trim()) {
-    return
+    return;
   }
 
   // 更新URL参数
   router.push({
-    path: '/search',
-    query: { q: searchKeyword.value.trim() }
-  })
-}
+    path: "/search",
+    query: { q: searchKeyword.value.trim() },
+  });
+};
 
 // 执行搜索逻辑
 const performSearch = async (keyword) => {
-  searching.value = true
+  searching.value = true;
   try {
-    const results = searchArticles(keyword)
-    searchResults.value = results || []
+    const results = searchArticles(keyword);
+    searchResults.value = results || [];
   } catch (error) {
-    console.error('搜索失败:', error)
-    searchResults.value = []
+    console.error("搜索失败:", error);
+    searchResults.value = [];
   } finally {
-    searching.value = false
+    searching.value = false;
   }
-}
+};
 
 // 通过标签搜索
 const searchByTag = (tag) => {
-  searchKeyword.value = tag
-  handleSearch()
-}
+  searchKeyword.value = tag;
+  handleSearch();
+};
 
 // 跳转到标签页面
 const navigateToTag = (tag) => {
-  router.push(`/tags?tag=${encodeURIComponent(tag)}`)
-}
+  router.push(`/tags?tag=${encodeURIComponent(tag)}`);
+};
 
 // 清除搜索
 const clearSearch = () => {
-  searchKeyword.value = ''
-  searchResults.value = []
-  router.push({ path: '/search' })
-}
+  searchKeyword.value = "";
+  searchResults.value = [];
+  router.push({ path: "/search" });
+};
+
+watch(searchKeyword, (keyword) => {
+  if (keyword.trim() === (route.query.q || "")) {
+    return;
+  }
+
+  clearTimeout(searchTimer);
+  if (!keyword.trim()) {
+    return;
+  }
+
+  searchTimer = setTimeout(() => {
+    router.replace({
+      path: "/search",
+      query: { q: keyword.trim() },
+    });
+  }, 300);
+});
+
+onUnmounted(() => {
+  clearTimeout(searchTimer);
+});
 </script>
 
 <style scoped lang="scss">

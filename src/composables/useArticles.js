@@ -18,6 +18,10 @@ export function useArticles() {
     return articleStore.getArticlesByTag(tag)
   }
 
+  const getArticlesByCategory = (category) => {
+    return articleStore.getArticlesByCategory(category)
+  }
+
   // 搜索文章
   const searchArticles = (keyword) => {
     return articleStore.searchArticles(keyword)
@@ -33,29 +37,45 @@ export function useArticles() {
     return articleStore.getArticlesByArchive
   }
 
+  const getCategories = () => {
+    return articleStore.getCategories
+  }
+
   // 增加阅读量（模拟）
   const incrementViewCount = (articleId) => {
-    // 这里可以实现在localStorage中记录阅读量
-    const viewKey = `article_views_${articleId}`
-    const views = parseInt(localStorage.getItem(viewKey) || '0') + 1
-    localStorage.setItem(viewKey, views.toString())
-    return views
+    return articleStore.incrementViews(articleId)
   }
 
   // 获取阅读量
   const getViewCount = (articleId) => {
-    const viewKey = `article_views_${articleId}`
-    return parseInt(localStorage.getItem(viewKey) || '0')
+    return articleStore.getViewCount(articleId)
+  }
+
+  const getTotalViews = () => {
+    return articleStore.getTotalViews()
+  }
+
+  const getArticleLikeCount = (articleId) => {
+    return articleStore.getArticleLikeCount(articleId)
+  }
+
+  const setArticleLikeCount = (articleId, likes) => {
+    return articleStore.setArticleLikeCount(articleId, likes)
   }
 
   return {
     getArticles,
     getArticle,
     getArticlesByTag,
+    getArticlesByCategory,
     searchArticles,
     getPopularTags,
     getArchive,
+    getCategories,
     incrementViewCount,
-    getViewCount
+    getViewCount,
+    getTotalViews,
+    getArticleLikeCount,
+    setArticleLikeCount
   }
 }

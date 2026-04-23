@@ -35,52 +35,6 @@
           </div>
         </div>
 
-        <!-- 快速链接 -->
-        <div class="footer-section">
-          <h3 class="section-title">
-            <el-icon><Link /></el-icon>
-            快速链接
-          </h3>
-          <ul class="quick-links">
-            <li>
-              <router-link to="/" class="footer-link">
-                <el-icon><HomeFilled /></el-icon>
-                首页
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/categories" class="footer-link">
-                <el-icon><Folder /></el-icon>
-                文章分类
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/tags" class="footer-link">
-                <el-icon><PriceTag /></el-icon>
-                标签云
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/archive" class="footer-link">
-                <el-icon><Calendar /></el-icon>
-                归档
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/about" class="footer-link">
-                <el-icon><User /></el-icon>
-                关于我
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/tools" class="footer-link">
-                <el-icon><Tools /></el-icon>
-                实用工具
-              </router-link>
-            </li>
-          </ul>
-        </div>
-
         <!-- 友情链接 -->
         <div class="footer-section">
           <h3 class="section-title">
@@ -191,11 +145,10 @@
 </template>
 
 <script setup>
-  import { ref, computed } from "vue";
+  import { computed } from "vue";
   import {
     InfoFilled,
     Platform,
-    Comment,
     Promotion,
     Message,
     Link,
@@ -214,42 +167,31 @@
     ChatDotRound,
     View,
     Timer,
-    Warning,
     Lock,
-    MapLocation,
     Top,
   } from "@element-plus/icons-vue";
   import { useArticles } from "@/composables/useArticles";
   import { useComments } from "@/composables/useComments";
 
-  const { getArticles } = useArticles();
+  const { getArticles, getTotalViews } = useArticles();
   const { getComments } = useComments();
 
   // 当前年份
   const currentYear = computed(() => new Date().getFullYear());
 
-  // 站点统计（模拟数据）
-  const stats = ref({
-    articles: 0,
-    comments: 0,
-    views: 15642,
-    days: 365,
-  });
-
-  // 初始化统计
-  const initStats = () => {
+  const stats = computed(() => {
     const articles = getArticles();
     const comments = getComments();
 
-    stats.value = {
+    return {
       articles: articles.length,
       comments: comments.length,
-      views: 15642, // 模拟数据
+      views: getTotalViews(),
       days: Math.floor(
         (Date.now() - new Date("2025-01-01").getTime()) / (1000 * 60 * 60 * 24),
       ),
     };
-  };
+  });
 
   // 滚动到顶部
   const scrollToTop = () => {
@@ -258,9 +200,6 @@
       behavior: "smooth",
     });
   };
-
-  // 初始化
-  initStats();
 </script>
 
 <style scoped lang="scss">

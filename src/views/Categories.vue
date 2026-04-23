@@ -127,7 +127,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
 import {
@@ -139,31 +140,20 @@ import {
   Close
 } from '@element-plus/icons-vue'
 
-const { getArticles } = useArticles()
+const route = useRoute()
+const router = useRouter()
+const { getCategories, getArticlesByCategory } = useArticles()
 
-const selectedCategory = ref('')
-const categories = computed(() => {
-  // 模拟分类数据，实际应从articleStore中获取
-  return [
-    { id: 'frontend', name: '前端开发', count: 8 },
-    { id: 'backend', name: '后端开发', count: 6 },
-    { id: 'database', name: '数据库', count: 4 },
-    { id: 'devops', name: 'DevOps', count: 3 },
-    { id: 'ai', name: '人工智能', count: 2 },
-    { id: 'others', name: '其他', count: 1 }
-  ]
+const selectedCategory = computed(() => {
+  return typeof route.query.category === 'string' ? route.query.category : ''
 })
 
-// 获取所有文章以计算分类统计
-const allArticles = computed(() => getArticles())
+const categories = computed(() => getCategories())
 
 // 根据选中的分类筛选文章
 const filteredArticles = computed(() => {
   if (!selectedCategory.value) return []
-  // 实际应根据分类ID筛选文章
-  return allArticles.value.filter(article =>
-    article.category === selectedCategory.value
-  )
+  return getArticlesByCategory(selectedCategory.value)
 })
 
 // 获取选中的分类名称
@@ -189,26 +179,23 @@ const getCategoryPercentage = (count) => {
 
 // 选择分类
 const selectCategory = (categoryId) => {
-  selectedCategory.value = categoryId
-  // 滚动到选中分类区域
-  setTimeout(() => {
-    const element = document.querySelector('.selected-category-section')
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, 100)
+  router.push({
+    path: '/categories',
+    query: { category: categoryId }
+  })
 }
 
 // 选择标签（跳转到标签页面）
 const selectTag = (tag) => {
-  // 这里可以跳转到标签页面或在本页面筛选
-  // 为了简单，我们跳转到标签页面
-  window.location.href = `/tags?tag=${encodeURIComponent(tag)}`
+  router.push({
+    path: '/tags',
+    query: { tag }
+  })
 }
 
 // 清除选中的分类
 const clearSelectedCategory = () => {
-  selectedCategory.value = ''
+  router.push('/categories')
 }
 </script>
 
