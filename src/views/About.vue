@@ -10,7 +10,7 @@
               <el-button
                 circle
                 :icon="Platform"
-                @click="openLink('https://github.com')"
+                @click="openLink('https://github.com/pikachuprogrammer01')"
               />
             </el-tooltip>
             <el-tooltip content="发送邮件联系我" placement="top">
