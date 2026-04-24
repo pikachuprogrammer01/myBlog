@@ -123,7 +123,7 @@
     return "info";
   };
 
-  // 时间线优化：突出毕设进度
+  // 时间线优化
   const timeline = ref([
     {
       title: "毕业设计系统开发",
