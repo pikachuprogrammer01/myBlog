@@ -3,7 +3,7 @@
     <div class="header-content">
       <div class="header-left" @click="router.push('/')">
         <div class="logo-circle">
-          <el-icon><Reading /></el-icon>
+          <img src="/favicon.ico" alt="LOGO" class="logo-img" />
         </div>
         <span class="logo-text">wushu<span>Blog</span></span>
       </div>
@@ -224,6 +224,11 @@
         justify-content: center;
         color: white;
         font-size: 20px;
+
+        .logo-img {
+          width: 30px;
+          height: 30px;
+        }
       }
 
       .logo-text {
