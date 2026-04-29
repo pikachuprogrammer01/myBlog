@@ -4,7 +4,9 @@
       <el-icon><Setting /></el-icon> 管理后台
     </h1>
 
-    <div v-if="!isAdmin" class="permission-denied">...</div>
+    <div v-if="!isAdmin" class="permission-denied">
+      非管理员，请使用管理员账号登录后再访问
+    </div>
 
     <div v-else class="admin-dashboard">
       <AdminStats :stats="stats" />
