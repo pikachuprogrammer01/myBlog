@@ -46,7 +46,6 @@
     DataAnalysis,
     PieChart,
   } from "@element-plus/icons-vue";
-  import * as echarts from "echarts";
   import adminClient from "@/api/client";
   import { useAuth } from "@/composables/useAuth";
   import { useComments } from "@/composables/useComments";

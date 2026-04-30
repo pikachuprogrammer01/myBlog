@@ -6,7 +6,6 @@
 
 <script setup>
   import { ref, onMounted, onUnmounted, watch } from "vue";
-  import * as echarts from "echarts";
 
   const props = defineProps({
     options: {
@@ -21,15 +20,22 @@
 
   const chartRef = ref(null);
   let chartInstance = null;
+  let echartsModule = null;
 
-  // 初始化图表
-  const initChart = () => {
+  async function loadECharts() {
+    if (echartsModule) return echartsModule;
+    echartsModule = await import("echarts");
+    return echartsModule;
+  }
+
+  const initChart = async () => {
     if (!chartRef.value) return;
 
     if (chartInstance) {
       chartInstance.dispose();
     }
 
+    const echarts = await loadECharts();
     chartInstance = echarts.init(chartRef.value);
     chartInstance.setOption(props.options);
   };

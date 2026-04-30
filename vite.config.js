@@ -1,12 +1,20 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
   plugins: [
     vue(),
+    Components({
+      resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+      dts: 'src/components.d.ts',
+    }),
   ],
-  base: process.env.VITE_BASE || '/',
+  base: env.VITE_BASE || '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -20,15 +28,25 @@ export default defineConfig({
     },
   },
   build: {
-    cssCodeSplit: true, // CSS 代码分割
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
-        // 静态资源分门别类打包，利于浏览器缓存
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
         chunkFileNames: 'js/[name]-[hash].js',
         entryFileNames: 'js/[name]-[hash].js',
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // ECharts 仅管理后台使用，独立拆包
+            if (id.includes('echarts') || id.includes('zrender')) {
+              return 'vendor-echarts'
+            }
+            // Vue 生态 + Element Plus + 其他依赖统一拆包，长期缓存
+            return 'vendor'
+          }
+        },
       }
     }
+  }
   }
 })
