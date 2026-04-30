@@ -116,6 +116,28 @@ export const useArticleStore = defineStore('article', () => {
     return Object.values(map).sort((a, b) => b.year - a.year || b.month - a.month);
   });
 
+  function getTotalViews() {
+    return getAllArticles().reduce((sum, a) => sum + (a.view_count || a.views || 0), 0);
+  }
+
+  function getArticlesByTag(tag) {
+    return getAllArticles().filter((a) => {
+      const tags = Array.isArray(a.tags) ? a.tags : [];
+      return tags.some((t) => String(t).toLowerCase() === String(tag).toLowerCase());
+    });
+  }
+
+  function getArticlesByCategory(categoryId) {
+    const target = String(categoryId).toLowerCase();
+    return getAllArticles().filter((a) => {
+      const cats = Array.isArray(a.categories) ? a.categories : a.category_name ? [a.category_name] : [];
+      return cats.some((c) => {
+        const name = typeof c === 'object' ? c.name || c.slug : c;
+        return String(name).toLowerCase() === target;
+      });
+    });
+  }
+
   function getPreviousNextArticles(currentId) {
     const sorted = getAllArticles();
     const idx = sorted.findIndex((a) => a.id === currentId || a.slug === currentId);
@@ -173,6 +195,9 @@ export const useArticleStore = defineStore('article', () => {
     getPopularTags,
     getArticlesByArchive,
     getPreviousNextArticles,
+    getArticlesByTag,
+    getArticlesByCategory,
+    getTotalViews,
     toggleLike,
     getLikeCount,
     toggleBookmark,

@@ -53,6 +53,18 @@ export function useArticles() {
     return articleStore.getBookmarks();
   }
 
+  function getArticlesByTag(tag) {
+    return articleStore.getArticlesByTag(tag);
+  }
+
+  function getArticlesByCategory(categoryId) {
+    return articleStore.getArticlesByCategory(categoryId);
+  }
+
+  function getTotalViews() {
+    return articleStore.getTotalViews();
+  }
+
   return {
     loadArticles,
     loadCategories,
@@ -66,5 +78,8 @@ export function useArticles() {
     getLikeCount,
     toggleBookmark,
     getBookmarks,
+    getArticlesByTag,
+    getArticlesByCategory,
+    getTotalViews,
   };
 }
