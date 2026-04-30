@@ -109,26 +109,34 @@
   const loadData = async () => {
     if (!isAdmin.value) return;
 
-    try {
-      const allArticles = getArticles();
-      articles.value = allArticles;
+    // 先从 store 获取本地数据作为回退
+    const localArticles = getArticles();
+    articles.value = localArticles;
 
-      // Fetch comments and contact messages from API
-      // For now, load comments per-article on demand
+    // 用本地数据计算基础统计
+    stats.value.totalArticles = localArticles.length;
+    stats.value.totalViews = localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0);
+
+    // 尝试通过 API 获取实时数据
+    try {
       const [articlesRes] = await Promise.all([
         adminClient.get('/api/articles', { params: { limit: 100 } }),
       ]);
 
       if (articlesRes.data.success) {
-        articles.value = articlesRes.data.data;
+        articles.value = articlesRes.data.data.map(a => ({
+          ...a,
+          id: a.slug || a.id,
+          categories: a.category_name ? [a.category_name] : (a.categories || []),
+        }));
         stats.value.totalArticles = articlesRes.data.pagination.total;
+        stats.value.totalViews = articlesRes.data.data.reduce((sum, a) => sum + (a.view_count || 0), 0);
       }
-
-      stats.value.totalComments = comments.value.length;
-      stats.value.totalViews = articles.value.reduce((sum, a) => sum + (a.view_count || 0), 0);
     } catch (error) {
-      console.error('加载管理数据失败:', error);
+      console.error('API 加载管理数据失败，使用本地数据:', error?.message || error);
     }
+
+    stats.value.totalComments = comments.value.length;
   };
 
   const deleteComment = async (commentId) => {

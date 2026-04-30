@@ -11,7 +11,7 @@
     "build:sql": "node scripts/articles-to-sql.cjs",
     "lint": "eslint . --ext .vue,.js",
     "format": "prettier --write src/",
-    "deploy": "VITE_BASE=/myBlog/ npm run build && gh-pages -d dist",
+    "deploy": "VITE_API_BASE=https://myblog-api-five.vercel.app VITE_BASE=/myBlog/ npm run build && gh-pages -d dist",
     "test": "vitest",
     "health-check": "node scripts/check-health.js"
   },

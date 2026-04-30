@@ -33,13 +33,21 @@
 </template>
 
 <script setup>
-  import { ref, watch } from "vue";
+  import { ref, watch, onMounted } from "vue";
   import { useRoute } from "vue-router";
   import { Loading } from "@element-plus/icons-vue";
+  import { useArticleStore } from "@/stores/article";
   import BackToTop from "@/components/common/BackToTop.vue";
 
   const route = useRoute();
   const loading = ref(false);
+
+  // 应用初始化时加载文章和分类（API 不可用时自动回退到静态 JSON）
+  const articleStore = useArticleStore();
+  onMounted(() => {
+    articleStore.loadArticles();
+    articleStore.loadCategories();
+  });
 
   // 监听路由变化显示加载状态
   watch(
