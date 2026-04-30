@@ -67,6 +67,20 @@ module.exports = async (req, res) => {
       req.body = await parseBody(req);
     }
 
+    // ============ Health Check ============
+    if (pathname === '/api/health' && req.method === 'GET') {
+      try {
+        await pool.execute('SELECT 1');
+        return res.status(200).json({ success: true, message: 'OK', db: 'connected' });
+      } catch (dbErr) {
+        return res.status(503).json({
+          success: false,
+          message: '数据库连接失败',
+          error: dbErr.message,
+        });
+      }
+    }
+
     // ============ Auth Routes ============
     if (pathname === '/api/auth/register' && req.method === 'POST') {
       return await register(req, res);
@@ -81,9 +95,11 @@ module.exports = async (req, res) => {
     // ============ Article Routes ============
     if (pathname === '/api/articles' && req.method === 'GET') {
       const page = parseInt(searchParams.get('page')) || 1;
-      const limit = parseInt(searchParams.get('limit')) || 10;
-      const offset = (page - 1) * limit;
+      const rawLimit = parseInt(searchParams.get('limit')) || 10;
+      const limit = Math.min(100, Math.max(1, rawLimit));
+      const offset = Math.max(0, (page - 1) * limit);
 
+      // LIMIT/OFFSET 用整数插值而非占位符，避免 TiDB 预编译语句报错
       const [rows] = await pool.execute(
         `SELECT a.id, a.title, a.slug, a.summary, a.cover_image,
                 a.tags, a.view_count, a.created_at, a.updated_at,
@@ -92,8 +108,7 @@ module.exports = async (req, res) => {
          LEFT JOIN categories c ON a.category_id = c.id
          WHERE a.status = 'published'
          ORDER BY a.created_at DESC
-         LIMIT ? OFFSET ?`,
-        [limit, offset]
+         LIMIT ${limit} OFFSET ${offset}`
       );
 
       const [countResult] = await pool.execute(
@@ -223,9 +238,13 @@ module.exports = async (req, res) => {
     return res.status(404).json({ success: false, message: '接口不存在' });
   } catch (error) {
     console.error('API Error:', error);
+    const isDbError = error.code && (
+      error.code.startsWith('ER_') ||
+      ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'PROTOCOL_CONNECTION_LOST'].includes(error.code)
+    );
     return res.status(500).json({
       success: false,
-      message: '服务器错误',
+      message: isDbError ? '数据库错误: ' + error.message : '服务器错误',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
