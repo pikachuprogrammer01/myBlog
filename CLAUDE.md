@@ -3,66 +3,102 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-A static personal blog built with Vue 3 + Element Plus, featuring 14 pages with simulated dynamic functionality (authentication, comments, admin panel) using client-side storage only. Deployed to GitHub Pages for technical demonstration.
+A personal blog built with Vue 3 + Element Plus, featuring 14 pages with simulated dynamic functionality (authentication, comments, admin panel) using client-side storage. Backed by a serverless API (Vercel Node.js) connected to a TiDB Cloud MySQL database for articles and categories. Deployed to GitHub Pages (frontend) and Vercel (API).
 
 ## Commands
 
 ### Development
-- `npm run dev` - Start Vite development server
+- `npm run dev` - Start Vite development server (port 5173)
 - `npm run build` - Build for production (output to `dist/`)
 - `npm run preview` - Preview production build locally
+
+### Content & Quality
+- `npm run build:content` - Build articles from Markdown (`content/articles/*.md`) to `src/data/articles.json`
 - `npm run lint` - Run ESLint code checking
 - `npm run format` - Format code with Prettier
 
-### Content Management
-- `npm run build:content` - Build articles from Markdown to JSON (reads from `content/articles/*.md`)
+### Testing
+- `npm run test` - Run Vitest test suite (jsdom environment)
+- `npx vitest run --coverage` - Run tests with coverage report (text/json/html output to `coverage/`)
 
-### Deployment
-- `npm run deploy` - Build and deploy to GitHub Pages via `gh-pages` package
+### Health & Deployment
+- `npm run health-check` - Check that critical files, scripts, and assets exist
+- `npm run deploy` - Build and deploy frontend to GitHub Pages via `gh-pages`
+- API deploys automatically to Vercel on git push (configured in `vercel.json`)
 
 ## Architecture
 
 ### Tech Stack
 - **Framework**: Vue 3 (Composition API, `<script setup>`)
 - **Build**: Vite 5.x
-- **Routing**: Vue Router 4.x
+- **Routing**: Vue Router 4.x (lazy-loaded routes, navigation guards)
 - **State**: Pinia 2.x
-- **UI**: Element Plus (full import in `main.js`)
-- **Markdown**: markdown-it + gray-matter (build-time processing)
-- **Storage**: localStorage for simulated data
+- **UI**: Element Plus 2.7 (full import in `main.js`) + ECharts 6
+- **Markdown**: markdown-it + gray-matter (build-time), marked (runtime)
+- **HTTP**: axios (API calls from frontend)
+- **Testing**: Vitest 4 + jsdom + @vue/test-utils
+- **Storage**: localStorage for simulated auth/comments; MySQL for articles
 
-### Core Design Patterns
-1. **Composition API**: Business logic in composables (`useAuth`, `useComments`, `useArticles`)
-2. **Client-Side Simulation**:
-   - Authentication: Hardcoded users (`src/constants/users.js`) + localStorage registration
-   - Comments: localStorage persistence (`blog_comments` key)
-   - Articles: Static JSON generated at build time
-3. **Role-Based Access**:
-   - `admin` role: Access to `/admin`, comment deletion
-   - `user` role: Comment posting (when logged in)
-4. **Static Site**: Built for GitHub Pages, no backend
+### Frontend Layer (`src/`)
+Follows Vue 3 conventions with Composables and Pinia stores:
+- **Composables** (`useAuth`, `useComments`, `useArticles`) wrap business logic
+- **Stores** (Pinia: auth, comment, article) hold reactive state, synced to localStorage
+- **Router** has two guard levels: `meta.requiresAuth` (any logged-in user) and `meta.requiresAdmin` (admin role only)
+
+### API Layer (`api/`)
+Serverless function deployed to Vercel (`@vercel/node` runtime):
+- **`api/index.js`** — Express-style request handler with CORS, routing, and MySQL queries
+  - `GET /api/articles` — Paginated article list (published only, with categories)
+  - `GET /api/articles/:slug` — Single article detail + increments view count
+  - `GET /api/categories` — All categories with article counts
+  - `GET /api/categories/:slug/articles` — Articles by category
+- **`api/db.js`** — MySQL connection pool (TiDB Cloud, env vars from `api/.env`)
+- CORS whitelist: GitHub Pages domain + localhost dev ports
+
+### Deployment Topology
+```
+GitHub Pages (/myBlog/)  ←  Static frontend (Vite build)
+Vercel (/api/*)          ←  Serverless API (Node.js)
+TiDB Cloud               ←  MySQL-compatible database
+```
+
+`vercel.json` routes: `/api/(.*)` → API function, `/(.*)` → static `dist/`.
 
 ### Project Structure
 ```
 src/
-├── assets/styles/   # Global SCSS styles (main.scss)
-├── components/      # Reusable components
+├── assets/styles/   # Global SCSS (main.scss)
+├── components/
 │   ├── layout/      # AppLayout, Header, Footer
 │   ├── blog/        # ArticleCard, CommentList, MarkdownRenderer
 │   └── common/      # Carousel, BackToTop
 ├── composables/     # useAuth, useComments, useArticles
-├── stores/          # Pinia stores: auth, comment, article
-├── views/           # 14 page components
+├── stores/          # Pinia: auth, comment, article
+├── views/           # 14 page components (lazy-loaded)
 ├── constants/       # Storage keys, hardcoded users
 ├── utils/           # Date formatting, storage helpers
-├── data/            # Generated article JSON
+├── data/            # Generated article JSON (build output)
 └── router/index.js  # Route definitions + guards
+
+api/
+├── index.js         # Serverless API handler
+├── db.js            # MySQL connection pool
+└── .env             # Database credentials (do NOT commit)
+
+content/
+├── articles/*.md    # 21 Markdown article source files
+└── assets/          # Article inline images
+
+scripts/
+├── build-content.js # MD → JSON article compiler
+└── check-health.js  # Project health checker
 ```
 
-### Key Data Flow
-- **Articles**: `content/articles/*.md` → `npm run build:content` → `src/data/articles.json` → Runtime load
+### Key Data Flows
+- **Articles (API)**: TiDB Cloud → `api/index.js` → Frontend axios call → displayed in views
+- **Articles (static)**: `content/articles/*.md` → `build:content` → `src/data/articles.json` → fallback/offline data
 - **Comments**: User input → Pinia store → localStorage (`blog_comments`)
-- **Auth**: Login/register → Pinia store → localStorage token
+- **Auth**: Login/register → Pinia store → localStorage token (hardcoded users + localStorage registrations)
 
 ### Routing (14 Pages)
 | Path | Component | Auth Required |
@@ -85,95 +121,56 @@ src/
 ## Important Constraints
 
 ### CSS Requirements
-- **Separation**: CSS must be in Vue SFC `<style>` blocks only
-- **No inline styles**: No `style` attributes or `<style>` tags in templates
-- **Preprocessor**: Sass/Scss (global styles in `src/assets/styles/main.scss`)
-- **Naming**: BEM-like conventions with `.blog-` prefix
+- CSS must be in Vue SFC `<style>` blocks only — no inline `style` attributes or `<style>` tags in templates
+- Sass/Scss preprocessor (global styles in `src/assets/styles/main.scss`)
+- `.blog-` prefix convention with BEM-like naming
 
 ### JavaScript Animations (Minimum 2)
-1. **Homepage Carousel** - Auto-rotate + manual controls (`Carousel.vue`)
-2. **Back-to-Top Button** - Scroll-triggered visibility, smooth scroll (`BackToTop.vue`)
+1. **Homepage Carousel** (`Carousel.vue`) — Auto-rotate + manual controls
+2. **Back-to-Top Button** (`BackToTop.vue`) — Scroll-triggered visibility, smooth scroll
 
 ### Security & Limitations (Demo Only)
-- ⚠️ **Not production-ready** - client-side simulation only
-- Hardcoded credentials in `src/constants/users.js`
+- Not production-ready — auth and comments are client-side simulation only
+- Hardcoded credentials in `src/constants/users.js` (admin/admin123, user1/user123, user2/user456)
 - No XSS/CSRF protection for comments
-- Data isolated per browser (no sync across devices)
+- Data isolated per browser (localStorage, no cross-device sync)
+- **API `.env` file contains real database credentials — never commit it**
+
+## Testing
+
+### Configuration
+- **Vitest** with jsdom environment, globals enabled
+- Config: `vitest.config.js` (mirrors Vite's `@` alias)
+- Setup file: `tests/setup.js`
+- Coverage via v8 provider, outputs text/json/html to `coverage/`
+
+### Test Files
+- `src/components/__tests__/Carousel.test.js` — Carousel component tests
+- `src/stores/__tests__/auth.test.js` — Auth store tests (login, logout, register, guards)
 
 ## Where to Look First
 
-### Configuration Files
-- `vite.config.js` - Build config, GitHub Pages base path (`/myBlog/`), `@` alias
-- `src/router/index.js` - All 14 routes + navigation guards
-- `src/constants/storage-keys.js` - localStorage key constants
+### Configuration
+- `vite.config.js` — Build config, GitHub Pages base path (`/myBlog/`), `@` alias, SCSS settings
+- `vercel.json` — Vercel deployment: API + static build routing
+- `vitest.config.js` — Test environment and coverage config
+- `src/router/index.js` — All 14 routes + navigation guards
+- `src/constants/storage-keys.js` — localStorage key constants
 
 ### Core Logic
-- `src/stores/auth.js` - Authentication state, login/logout/register
-- `src/composables/useAuth.js` - Auth wrapper functions
-- `src/constants/users.js` - Hardcoded demo users (admin/admin123, user1/user123, user2/user456)
+- `src/stores/auth.js` — Authentication state, login/logout/register actions
+- `src/composables/useAuth.js` — Auth wrapper functions
+- `src/constants/users.js` — Hardcoded demo users
+- `api/index.js` — Serverless API with article/category endpoints
 
 ### Key Components
-- `src/components/layout/AppLayout.vue` - Main layout wrapper
-- `src/components/common/Carousel.vue` - Homepage carousel (animation #1)
-- `src/components/common/BackToTop.vue` - Scroll-to-top (animation #2)
-- `src/components/blog/MarkdownRenderer.vue` - Article content display
+- `src/components/layout/AppLayout.vue` — Main layout wrapper
+- `src/components/common/Carousel.vue` — Homepage carousel (animation #1)
+- `src/components/common/BackToTop.vue` — Scroll-to-top (animation #2)
+- `src/components/blog/MarkdownRenderer.vue` — Article content display
 
-## Development Notes
-
-### Element Plus Integration
-- Full import in `main.js` with all icons registered globally
-- Styles imported from `element-plus/dist/index.css`
-
-### Build & Deployment
-- Base path: `/myBlog/` in production (configured in `vite.config.js`)
-- Deploy via `npm run deploy` (builds + pushes to gh-pages branch)
-
-### Code Quality
-- ESLint with Vue 3 recommended rules
-- Component naming: PascalCase (.vue files)
-- CSS class naming: kebab-case with `.blog-` prefix
-
-## Icon and Asset Usage Policy
-
-### Strict Prohibition
-**NEVER** invent, create, or fabricate fictional:
-- Icons
-- Image URLs or paths
-- Visual assets
-- UI component names
-- Library/framework features
-
-### Mandatory Research Protocol
-
-**BEFORE** including any visual element or uncertain content:
-
-1. **SEARCH FIRST**
-   - Verify existence of icons in official documentation
-   - Confirm correct syntax and usage patterns
-   - Check for deprecated or removed features
-
-2. **USE TRUSTED SOURCES**
-   - Official documentation (primary source)
-   - Established design systems
-   - Verified public repositories
-   - Authoritative community resources
-
-3. **UNCERTAIN? SEARCH THEN ASK**
-   If you're not 100% certain about:
-   - Icon availability
-   - API endpoint existence
-   - Framework feature support
-   - Library version compatibility
-   
-   **Procedure:**
-   - Pause coding
-   - Search for official documentation
-   - Verify information from multiple sources
-   - Only proceed when confident
-
-### Code Examples
-
-**Unacceptable (fabricated content):**
-```javascript
-// ❌ DON'T: Inventing non-existent features
-import { fakeIcon } from 'non-existent-library';
+### Development Notes
+- Element Plus is fully imported with all icons registered globally in `main.js`
+- Production base path is `/myBlog/` (GitHub Pages); dev is `/`
+- CORS in `api/index.js` must be updated if deploying to a different domain
+- Articles can come from either the MySQL API or the static JSON build — the static build serves as offline fallback

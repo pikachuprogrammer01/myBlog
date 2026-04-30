@@ -1,0 +1,10 @@
+{
+  "name": "myblog-api",
+  "version": "1.0.0",
+  "description": "",
+   "dependencies": {
+    "mysql2": "^3.22.3",
+    "dotenv": "^17.4.2"
+  },
+  "author": "pikachu"
+}
