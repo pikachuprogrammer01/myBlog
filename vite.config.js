@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     vue(),
   ],
-  base: process.env.NODE_ENV === 'production' ? '/myBlog/' : '/',
+  base: process.env.VITE_BASE || '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
