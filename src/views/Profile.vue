@@ -15,7 +15,7 @@
             <h2>{{ user?.username }}</h2>
             <div class="user-meta">
               <span class="user-role">{{ roleText }}</span>
-              <span class="user-id">ID: {{ user?.id }}</span>
+              <span class="user-id">ID: {{ user?.username }}</span>
             </div>
           </div>
         </div>
@@ -83,49 +83,46 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuth } from '@/composables/useAuth'
-import { useComments } from '@/composables/useComments'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
+import client from '@/api/client'
 import { User, ChatDotRound, Calendar } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const { currentUser: user, logout } = useAuth()
-const { getMyComments } = useComments()
 const { getArticle } = useArticles()
+const myComments = ref([])
 
-// 用户头像（模拟）
 const userAvatar = computed(() => {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value?.username}`
 })
 
-// 角色文本
 const roleText = computed(() => {
   return user.value?.role === 'admin' ? '管理员' : '普通用户'
 })
 
-// 注册天数
 const registrationDays = computed(() => {
-  if (!user.value?.createdAt) {
-    return 1
-  }
-
-  const createdAt = new Date(user.value.createdAt).getTime()
+  if (!user.value?.created_at) return 1
+  const createdAt = new Date(user.value.created_at).getTime()
   const diff = Math.ceil((Date.now() - createdAt) / 86400000)
   return Math.max(diff, 1)
 })
 
-const myComments = computed(() => {
-  return getMyComments().map(comment => ({
-    ...comment,
-    articleTitle: getArticle(comment.articleId)?.title || comment.articleId
-  }))
-})
+async function loadProfile() {
+  try {
+    const res = await client.get('/api/auth/profile')
+    if (res.data.success) {
+      myComments.value = [] // API doesn't return comments list yet
+    }
+  } catch {
+    // ignore
+  }
+}
 
-// 退出登录
 const handleLogout = () => {
   logout()
   ElMessage.success('已退出登录')
@@ -133,11 +130,12 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  // 检查是否已登录
   if (!user.value) {
     ElMessage.warning('请先登录')
     router.push('/login')
+    return
   }
+  loadProfile()
 })
 </script>
 

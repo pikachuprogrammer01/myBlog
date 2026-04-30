@@ -47,46 +47,32 @@
     PieChart,
   } from "@element-plus/icons-vue";
   import * as echarts from "echarts";
-  import { HARDCODED_USERS } from "@/constants/users";
-  import { STORAGE_KEYS } from "@/constants/storage-keys";
+  import adminClient from "@/api/client";
   import { useAuth } from "@/composables/useAuth";
   import { useComments } from "@/composables/useComments";
   import { useArticles } from "@/composables/useArticles";
-  import { formatDate } from "@/utils/date";
   import AdminChart from "@/components/admin/AdminChart.vue";
   import AdminStats from "@/components/admin/AdminStats.vue";
   import CommentManager from "@/components/admin/CommentManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
   const router = useRouter();
-  const {
-    currentUser,
-    getAllUsers,
-    promoteUserToAdmin,
-    resetLocalUsers,
-    logout,
-  } = useAuth();
-  const {
-    getAllComments,
-    deleteComment: deleteCommentApi,
-    clearAllComments: clearAllCommentsApi,
-    exportComments,
-  } = useComments();
-  const { getArticles, getTotalViews } = useArticles();
+  const { currentUser, logout } = useAuth();
+  const { deleteComment: deleteCommentApi, permanentDeleteComment: permanentDeleteApi } = useComments();
+  const { getArticles } = useArticles();
 
-  // 模拟数据状态
   const comments = ref([]);
   const articles = ref([]);
-  const users = ref([]);
   const selectedComments = ref([]);
 
   const categoryOptions = computed(() => {
-    if (articles.value.length === 0) return {}; // 防护空数据
-
+    if (articles.value.length === 0) return {};
     const categoryMap = {};
     articles.value.forEach((post) => {
-      const cat = post.categories || "未分类";
-      categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+      const cats = post.categories || (post.category_name ? [post.category_name] : ["未分类"]);
+      cats.forEach((cat) => {
+        categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+      });
     });
 
     return {
@@ -111,66 +97,8 @@
     };
   });
 
-  // 评论趋势配置
-  const commentTrendOptions = computed(() => {
-    const days = [];
-    const counts = [];
-    // 优化：预先转换日期，避免在循环中反复转换
-    const commentDates = comments.value.map(
-      (c) => new Date(c.createdAt).toISOString().split("T")[0],
-    );
-
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      days.push(dateStr.substring(5)); // MM-DD
-
-      // 使用预处理的数组统计，性能更佳
-      const count = commentDates.filter((date) => date === dateStr).length;
-      counts.push(count);
-    }
-
-    return {
-      tooltip: { trigger: "axis", backgroundColor: "rgba(255, 255, 255, 0.9)" },
-      grid: { left: "3%", right: "4%", bottom: "15%", containLabel: true },
-      xAxis: {
-        type: "category",
-        boundaryGap: false,
-        data: days,
-        axisLine: { lineStyle: { color: "#E4E7ED" } },
-        axisLabel: { color: "#909399" },
-      },
-      yAxis: {
-        type: "value",
-        minInterval: 1,
-        splitLine: { lineStyle: { type: "dashed" } },
-      },
-      series: [
-        {
-          name: "每日评论数",
-          type: "line",
-          smooth: true,
-          symbol: "circle",
-          symbolSize: 8,
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "rgba(64, 158, 255, 0.3)" },
-              { offset: 1, color: "rgba(64, 158, 255, 0)" },
-            ]),
-          },
-          lineStyle: { width: 3, color: "#409EFF" },
-          itemStyle: { color: "#409EFF" },
-          data: counts,
-        },
-      ],
-    };
-  });
-
-  // 权限检查
   const isAdmin = computed(() => currentUser.value?.role === "admin");
 
-  // 统计数据
   const stats = ref({
     totalArticles: 0,
     totalComments: 0,
@@ -178,37 +106,31 @@
     totalViews: 0,
   });
 
-  // 加载数据
-  const loadData = () => {
+  const loadData = async () => {
     if (!isAdmin.value) return;
 
-    // 同步获取基础数据
-    const allArticles = getArticles();
-    articles.value = allArticles; // 确保 articles 被赋值
+    try {
+      const allArticles = getArticles();
+      articles.value = allArticles;
 
-    const allComments = getAllComments({ includeDeleted: false });
-    comments.value = allComments;
+      // Fetch comments and contact messages from API
+      // For now, load comments per-article on demand
+      const [articlesRes] = await Promise.all([
+        adminClient.get('/api/articles', { params: { limit: 100 } }),
+      ]);
 
-    users.value = getAllUsers().map((user) => ({
-      ...user,
-      isBuiltin: HARDCODED_USERS.some((b) => b.id === user.id),
-    }));
+      if (articlesRes.data.success) {
+        articles.value = articlesRes.data.data;
+        stats.value.totalArticles = articlesRes.data.pagination.total;
+      }
 
-    // 统一更新统计
-    stats.value = {
-      totalArticles: allArticles.length,
-      totalComments: allComments.length,
-      totalUsers: users.value.length,
-      totalViews: getTotalViews(),
-    };
+      stats.value.totalComments = comments.value.length;
+      stats.value.totalViews = articles.value.reduce((sum, a) => sum + (a.view_count || 0), 0);
+    } catch (error) {
+      console.error('加载管理数据失败:', error);
+    }
   };
 
-  // 表格选择变化
-  const handleSelectionChange = (selection) => {
-    selectedComments.value = selection.map((item) => item.id);
-  };
-
-  // 删除单条评论
   const deleteComment = async (commentId) => {
     try {
       await ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {
@@ -217,11 +139,10 @@
         type: "warning",
       });
 
-      // 实际调用删除接口
-      const result = deleteCommentApi(commentId);
+      const result = await deleteCommentApi(commentId);
       if (result.success) {
         ElMessage.success("评论已删除");
-        loadData();
+        await loadData();
       } else {
         ElMessage.error(result.message || "删除失败");
       }
@@ -230,7 +151,6 @@
     }
   };
 
-  // 批量删除评论
   const batchDeleteComments = async () => {
     if (selectedComments.value.length === 0) return;
 
@@ -245,67 +165,45 @@
         },
       );
 
-      // 批量删除
       let successCount = 0;
-      selectedComments.value.forEach((commentId) => {
-        const result = deleteCommentApi(commentId);
+      for (const commentId of selectedComments.value) {
+        const result = await deleteCommentApi(commentId);
         if (result.success) successCount++;
-      });
+      }
 
       ElMessage.success(`成功删除 ${successCount} 条评论`);
       selectedComments.value = [];
-      loadData();
+      await loadData();
     } catch (error) {
       // 用户取消删除
     }
   };
 
-  // 设为管理员
-  const promoteToAdmin = (userId) => {
-    ElMessageBox.confirm("确定要将此用户设为管理员吗？", "管理员设置确认", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    })
-      .then(() => {
-        const result = promoteUserToAdmin(userId);
-        if (result.success) {
-          ElMessage.success("用户角色已更新");
-          loadData();
-        } else {
-          ElMessage.error(result.message || "更新失败");
-        }
-      })
-      .catch(() => {
-        // 取消
-      });
+  const exportData = async () => {
+    try {
+      const data = {
+        stats: stats.value,
+        exportTime: new Date().toISOString(),
+      };
+
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `blog-data-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      ElMessage.success("数据导出成功");
+    } catch {
+      ElMessage.error("导出失败");
+    }
   };
 
-  // 导出数据
-  const exportData = () => {
-    const data = {
-      comments: JSON.parse(exportComments()),
-      users: users.value,
-      stats: stats.value,
-      exportTime: new Date().toISOString(),
-    };
-
-    const dataStr = JSON.stringify(data, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `blog-data-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    ElMessage.success("数据导出成功");
-  };
-
-  // 清空所有评论
   const clearAllComments = () => {
     ElMessageBox.confirm("确定要清空所有评论吗？此操作不可恢复！", "清空确认", {
       confirmButtonText: "确定",
@@ -313,24 +211,16 @@
       type: "error",
       confirmButtonClass: "el-button--danger",
     })
-      .then(() => {
-        const result = clearAllCommentsApi();
-        if (result.success) {
-          ElMessage.success("所有评论已清空");
-          loadData();
-        } else {
-          ElMessage.error(result.message || "清空失败");
-        }
+      .then(async () => {
+        // Comments are cleared per-article now; this would need a dedicated admin endpoint
+        ElMessage.info("清空评论功能需通过数据库操作完成");
       })
-      .catch(() => {
-        // 取消
-      });
+      .catch(() => {});
   };
 
-  // 重置所有数据
   const resetAllData = () => {
     ElMessageBox.confirm(
-      "确定要重置所有数据吗？这将删除所有用户、评论等数据，恢复为初始状态！",
+      "确定要重置所有数据吗？这是破坏性操作！",
       "重置确认",
       {
         confirmButtonText: "确定",
@@ -340,20 +230,11 @@
       },
     )
       .then(() => {
-        localStorage.removeItem(STORAGE_KEYS.COMMENTS);
-        localStorage.removeItem(STORAGE_KEYS.ARTICLE_VIEWS);
-        localStorage.removeItem(STORAGE_KEYS.ARTICLE_LIKES);
-        localStorage.removeItem(STORAGE_KEYS.LIKED_ARTICLES);
-        localStorage.removeItem(STORAGE_KEYS.BOOKMARKS);
-        localStorage.removeItem(STORAGE_KEYS.CONTACT_MESSAGES);
-        resetLocalUsers();
         logout();
-        ElMessage.success("所有数据已重置");
+        ElMessage.success("已退出登录");
         router.push("/");
       })
-      .catch(() => {
-        // 取消
-      });
+      .catch(() => {});
   };
 
   onMounted(() => {

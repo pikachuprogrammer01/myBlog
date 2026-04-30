@@ -241,14 +241,14 @@
 
   const emit = defineEmits(["submit", "cancel"]);
 
-  const { getCurrentUser } = useAuth();
-  const { addComment, updateComment, getComment } = useComments();
+  const { currentUser } = useAuth();
+  const { addComment, updateComment } = useComments();
 
   // 响应式状态
   const commentFormRoot = ref(null);
   const formRef = ref(null);
   const form = reactive({
-    content: "",
+    content: '',
     options: {
       notify: true,
       sticky: false,
@@ -260,10 +260,7 @@
     link: false,
   });
   const submitting = ref(false);
-  const activeTab = ref("edit");
-
-  // 用户信息
-  const currentUser = computed(() => getCurrentUser());
+  const activeTab = ref('edit');
   const isLoggedIn = computed(() => !!currentUser.value);
   const isAdmin = computed(() => currentUser.value?.role === "admin");
   const isEditing = computed(() => !!props.editCommentId);
@@ -447,22 +444,11 @@
 
       submitting.value = true;
 
-      const commentData = {
-        articleId: props.articleId,
-        content: form.content.trim(),
-        userId: currentUser.value.id,
-        username: currentUser.value.username,
-        parentId: props.parentId || null,
-        options: { ...form.options },
-      };
-
       let result;
       if (isEditing.value) {
-        // 更新评论
-        result = updateComment(props.editCommentId, commentData);
+        result = await updateComment(props.editCommentId, form.content.trim());
       } else {
-        // 添加新评论
-        result = addComment(commentData);
+        result = await addComment(props.articleId, form.content.trim(), props.parentId || null);
       }
 
       if (result.success) {
@@ -537,14 +523,9 @@
     () => props.editCommentId,
     (newId) => {
       if (newId) {
-        const targetComment = getComment(newId);
-        if (targetComment) {
-          form.content = targetComment.content;
-          form.options.notify = targetComment.options?.notify !== false;
-          form.options.sticky = !!targetComment.options?.sticky;
-        }
+        // Edit mode: content is populated by parent component via event
       } else {
-        form.content = "";
+        form.content = '';
         form.options.notify = true;
         form.options.sticky = false;
       }

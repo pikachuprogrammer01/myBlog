@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:content": "node scripts/build-content.js",
+    "build:sql": "node scripts/articles-to-sql.cjs",
     "lint": "eslint . --ext .vue,.js",
     "format": "prettier --write src/",
     "deploy": "npm run build && gh-pages -d dist",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "axios": "^1.15.2",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dayjs": "^1.11.10",
     "dotenv": "^17.4.2",
@@ -23,6 +25,7 @@
     "element-plus": "^2.7.0",
     "front-matter": "^4.0.2",
     "gray-matter": "^4.0.3",
+    "jsonwebtoken": "^9.0.3",
     "markdown-it": "^14.1.0",
     "markdown-it-emoji": "^3.0.0",
     "markdown-it-footnote": "^4.0.0",

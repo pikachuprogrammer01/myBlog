@@ -293,8 +293,8 @@ const props = defineProps({
 
 const emit = defineEmits(['comment-deleted', 'comment-liked', 'reply-submitted'])
 
-const { currentUser, getAllUsers } = useAuth()
-const { getCommentTree, deleteComment, likeComment } = useComments()
+const { currentUser } = useAuth()
+const { loadComments: fetchComments, getCommentTree, deleteComment, likeComment } = useComments()
 
 // 响应式状态
 const comments = ref([])
@@ -348,19 +348,11 @@ const paginatedComments = computed(() => {
   return sortedComments.value.slice(start, end)
 })
 
-const resolveUserRole = (comment) => {
-  if (comment.userRole) {
-    return comment.userRole
-  }
-
-  return getAllUsers().find(targetUser => targetUser.id === comment.userId)?.role || 'user'
-}
-
 const decorateReplies = (replyList = []) => {
   return replyList.map(reply => ({
     ...reply,
-    isAdmin: resolveUserRole(reply) === 'admin',
-    liked: currentUser.value ? reply.likedBy?.includes(currentUser.value.id) : false
+    isAdmin: reply.userRole === 'admin',
+    liked: reply.liked !== undefined ? reply.liked : false
   }))
 }
 
@@ -369,8 +361,8 @@ const decorateComment = (comment) => {
     ...comment,
     checked: selectedComments.value.includes(comment.id),
     showReplyForm: false,
-    isAdmin: resolveUserRole(comment) === 'admin',
-    liked: currentUser.value ? comment.likedBy?.includes(currentUser.value.id) : false,
+    isAdmin: comment.userRole === 'admin',
+    liked: comment.liked !== undefined ? comment.liked : false,
     replies: decorateReplies(comment.replies)
   }
 }
@@ -438,9 +430,10 @@ const canDeleteComment = (comment) => {
 }
 
 // 加载评论
-const loadComments = () => {
+const loadComments = async () => {
   loading.value = true
   try {
+    await fetchComments(props.articleId)
     const articleComments = getCommentTree(props.articleId)
     comments.value = articleComments.map(decorateComment)
     const maxPage = Math.max(1, totalPages.value || 1)
@@ -488,13 +481,13 @@ const batchDeleteComments = async () => {
 
     let successCount = 0
     for (const commentId of selectedComments.value) {
-      const result = deleteComment(commentId)
+      const result = await deleteComment(commentId)
       if (result.success) successCount++
     }
 
     ElMessage.success(`成功删除 ${successCount} 条评论`)
     selectedComments.value = []
-    loadComments()
+    await loadComments()
     emit('comment-deleted', successCount)
   } catch (error) {
     // 用户取消删除
@@ -514,10 +507,10 @@ const handleDelete = async (commentId) => {
       }
     )
 
-    const result = deleteComment(commentId)
+    const result = await deleteComment(commentId)
     if (result.success) {
       ElMessage.success('评论已删除')
-      loadComments()
+      await loadComments()
       emit('comment-deleted', 1)
     } else {
       ElMessage.error(result.message || '删除失败')
@@ -528,15 +521,15 @@ const handleDelete = async (commentId) => {
 }
 
 // 切换点赞
-const toggleLike = (commentId) => {
+const toggleLike = async (commentId) => {
   if (!currentUser.value) {
     ElMessage.warning('请先登录')
     return
   }
 
-  const result = likeComment(commentId)
+  const result = await likeComment(commentId)
   if (result.success) {
-    loadComments()
+    await loadComments()
     emit('comment-liked', commentId)
   } else {
     ElMessage.warning(result.message || '操作失败')
@@ -561,8 +554,8 @@ const toggleReplyForm = (commentId) => {
 }
 
 // 处理回复提交
-const handleReplySubmit = () => {
-  loadComments()
+const handleReplySubmit = async () => {
+  await loadComments()
   emit('reply-submitted')
 }
 

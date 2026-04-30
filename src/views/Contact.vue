@@ -73,10 +73,10 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import { Message } from "@element-plus/icons-vue";
-import { STORAGE_KEYS } from "@/constants/storage-keys";
+import client from "@/api/client";
 import { formatDate } from "@/utils/date";
 
 const formRef = ref(null);
@@ -127,46 +127,55 @@ const rules = {
   ],
 };
 
-const readMessages = () => {
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.CONTACT_MESSAGES) || "[]",
-    );
-    return Array.isArray(stored) ? stored : [];
-  } catch (error) {
-    console.error("读取联系记录失败:", error);
-    return [];
-  }
-};
+const messages = ref([]);
 
-const submissionCount = computed(() => readMessages().length);
+const submissionCount = computed(() => messages.value.length);
 
 const lastSubmissionText = computed(() => {
-  const latestMessage = readMessages()[0];
+  const latestMessage = messages.value[0];
   if (!latestMessage) {
-    return "";
+    return '';
   }
-
   return `${latestMessage.name} 于 ${formatDate(
-    latestMessage.createdAt,
-    "YYYY-MM-DD HH:mm",
-  )} 提交了“${latestMessage.subject}”`;
+    latestMessage.created_at,
+    'YYYY-MM-DD HH:mm',
+  )} 提交了”${latestMessage.subject}”`;
 });
 
-const saveMessage = () => {
-  const nextMessages = [
-    {
-      ...form,
-      createdAt: new Date().toISOString(),
-    },
-    ...readMessages(),
-  ];
+async function loadMessages() {
+  try {
+    const res = await client.get('/api/contact');
+    if (res.data.success) {
+      messages.value = res.data.data || [];
+    }
+  } catch {
+    messages.value = [];
+  }
+}
 
-  localStorage.setItem(
-    STORAGE_KEYS.CONTACT_MESSAGES,
-    JSON.stringify(nextMessages),
-  );
-};
+async function handleSubmit() {
+  try {
+    await formRef.value?.validate();
+    submitting.value = true;
+
+    await client.post('/api/contact', {
+      name: form.name,
+      email: form.email,
+      subject: form.subject,
+      message: form.message,
+    });
+
+    ElMessage.success('留言提交成功');
+    resetForm();
+    await loadMessages();
+  } catch (error) {
+    if (error?.response) {
+      ElMessage.error(error.response.data?.message || '提交失败');
+    }
+  } finally {
+    submitting.value = false;
+  }
+}
 
 const resetForm = () => {
   form.name = "";
@@ -180,23 +189,9 @@ const handleReset = () => {
   resetForm();
 };
 
-const handleSubmit = async () => {
-  try {
-    await formRef.value?.validate();
-    submitting.value = true;
-
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    saveMessage();
-    ElMessage.success("提交成功，这是一条模拟留言记录");
-    resetForm();
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("联系表单提交失败:", error);
-    }
-  } finally {
-    submitting.value = false;
-  }
-};
+onMounted(() => {
+  loadMessages();
+});
 </script>
 
 <style scoped lang="scss">

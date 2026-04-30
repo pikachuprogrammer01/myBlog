@@ -1,81 +1,70 @@
-import { useArticleStore } from '@/stores/article'
+import { useArticleStore } from '@/stores/article';
 
 export function useArticles() {
-  const articleStore = useArticleStore()
+  const articleStore = useArticleStore();
 
-  // 获取所有文章
-  const getArticles = () => {
-    return articleStore.getAllArticles()
+  function loadArticles() {
+    return articleStore.loadArticles();
   }
 
-  // 根据ID获取文章
-  const getArticle = (id) => {
-    return articleStore.getArticleById(id)
+  function loadCategories() {
+    return articleStore.loadCategories();
   }
 
-  // 根据标签获取文章
-  const getArticlesByTag = (tag) => {
-    return articleStore.getArticlesByTag(tag)
+  function getArticles() {
+    return articleStore.getAllArticles();
   }
 
-  const getArticlesByCategory = (category) => {
-    return articleStore.getArticlesByCategory(category)
+  function getArticle(id) {
+    return articleStore.getArticleById(id);
   }
 
-  // 搜索文章
-  const searchArticles = (keyword) => {
-    return articleStore.searchArticles(keyword)
+  function searchArticles(keyword) {
+    return articleStore.searchArticles(keyword);
   }
 
-  // 获取热门标签
-  const getPopularTags = () => {
-    return articleStore.getPopularTags
+  function getPopularTags() {
+    return articleStore.getPopularTags;
   }
 
-  // 获取归档数据
-  const getArchive = () => {
-    return articleStore.getArticlesByArchive
+  function getArchive() {
+    return articleStore.getArticlesByArchive;
   }
 
-  const getCategories = () => {
-    return articleStore.getCategories
+  function getCategories() {
+    return articleStore.categories.length > 0
+      ? articleStore.categories
+      : articleStore.getPopularTags; // fallback to tag-derived categories
   }
 
-  // 增加阅读量（模拟）
-  const incrementViewCount = (articleId) => {
-    return articleStore.incrementViews(articleId)
+  function toggleLike(slug) {
+    return articleStore.toggleLike(slug);
   }
 
-  // 获取阅读量
-  const getViewCount = (articleId) => {
-    return articleStore.getViewCount(articleId)
+  function getLikeCount(slug) {
+    return articleStore.getLikeCount(slug);
   }
 
-  const getTotalViews = () => {
-    return articleStore.getTotalViews()
+  function toggleBookmark(slug) {
+    return articleStore.toggleBookmark(slug);
   }
 
-  const getArticleLikeCount = (articleId) => {
-    return articleStore.getArticleLikeCount(articleId)
-  }
-
-  const setArticleLikeCount = (articleId, likes) => {
-    return articleStore.setArticleLikeCount(articleId, likes)
+  function getBookmarks() {
+    return articleStore.getBookmarks();
   }
 
   return {
+    loadArticles,
+    loadCategories,
     getArticles,
     getArticle,
-    getArticlesByTag,
-    getArticlesByCategory,
     searchArticles,
     getPopularTags,
     getArchive,
     getCategories,
-    incrementViewCount,
-    getViewCount,
-    getTotalViews,
-    getArticleLikeCount,
-    setArticleLikeCount
-  }
+    toggleLike,
+    getLikeCount,
+    toggleBookmark,
+    getBookmarks,
+  };
 }

@@ -225,10 +225,8 @@ import {
   Printer
 } from '@element-plus/icons-vue'
 import { useArticleStore } from '@/stores/article'
-import { STORAGE_KEYS } from '@/constants/storage-keys'
 import { useAuth } from '@/composables/useAuth'
 import { useArticles } from '@/composables/useArticles'
-import { useComments } from '@/composables/useComments'
 import MarkdownRenderer from '@/components/blog/MarkdownRenderer.vue'
 import CommentList from '@/components/blog/CommentList.vue'
 import CommentForm from '@/components/blog/CommentForm.vue'
@@ -238,9 +236,7 @@ const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const { currentUser } = useAuth()
-const { getArticle, incrementViewCount, getArticleLikeCount, setArticleLikeCount } =
-  useArticles()
-const { getCommentsCount } = useComments()
+const { getArticle, toggleLike, toggleBookmark, getLikeCount } = useArticles()
 
 // 路由参数
 const articleId = computed(() => route.params.id)
@@ -257,69 +253,25 @@ const commentCount = ref(0)
 const commentSort = ref('latest')
 const commentListRef = ref(null)
 
-// 用户信息
 const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
-const readStoredMap = (key) => {
-  try {
-    const stored = JSON.parse(localStorage.getItem(key) || '{}')
-    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {}
-  } catch (error) {
-    console.error(`读取 ${key} 失败:`, error)
-    return {}
-  }
-}
-
-const writeStoredMap = (key, value) => {
-  localStorage.setItem(key, JSON.stringify(value))
-}
-
-const getScopedArticleList = (key) => {
-  const scopedMap = readStoredMap(key)
-  const scopedUserId = currentUser.value?.id || 'guest'
-  const scopedList = scopedMap[scopedUserId]
-  return Array.isArray(scopedList) ? scopedList : []
-}
-
-const setScopedArticleList = (key, value) => {
-  const scopedMap = readStoredMap(key)
-  const scopedUserId = currentUser.value?.id || 'guest'
-  scopedMap[scopedUserId] = value
-  writeStoredMap(key, scopedMap)
-}
-
-// 格式化日期
 const formatDate = (date) => {
   if (!date) return '未知日期'
   return dayjs(date).format('YYYY年MM月DD日')
 }
 
-// 加载文章数据
 const loadArticle = async () => {
   loading.value = true
-
   try {
-    // 获取文章详情
     article.value = getArticle(articleId.value)
 
     if (article.value) {
-      // 增加阅读量
-      const views = incrementViewCount(articleId.value)
-      article.value = {
-        ...getArticle(articleId.value),
-        views,
-        likes: getArticleLikeCount(articleId.value)
-      }
-
-      // 获取上一篇/下一篇
       const { previous, next } = articleStore.getPreviousNextArticles(articleId.value)
       previousArticle.value = previous
       nextArticle.value = next
 
-      const likedArticles = getScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES)
-      liked.value = likedArticles.includes(articleId.value)
-      likeCount.value = getArticleLikeCount(articleId.value)
-      commentCount.value = getCommentsCount(articleId.value)
+      const likes = await getLikeCount(articleId.value)
+      likeCount.value = likes
     }
   } catch (error) {
     console.error('加载文章失败:', error)
@@ -329,17 +281,14 @@ const loadArticle = async () => {
   }
 }
 
-// 处理标签点击
 const handleTagClick = (tag) => {
   router.push(`/tags?tag=${encodeURIComponent(tag)}`)
 }
 
-// 处理文章点击
 const handleArticleClick = (targetArticle) => {
   router.push(`/article/${targetArticle.id}`)
 }
 
-// 处理分享
 const handleShare = () => {
   const url = window.location.href
   const title = article.value.title
@@ -351,11 +300,9 @@ const handleShare = () => {
       url: url
     })
   } else {
-    // 降级方案：复制链接
     navigator.clipboard.writeText(url).then(() => {
       ElMessage.success('链接已复制到剪贴板')
     }).catch(() => {
-      // 如果clipboard API不可用，显示提示
       ElMessageBox.alert(`分享链接: ${url}`, '分享文章', {
         confirmButtonText: '确定'
       })
@@ -363,17 +310,14 @@ const handleShare = () => {
   }
 }
 
-// 处理编辑（仅管理员）
 const handleEdit = () => {
   if (!isAdmin.value) {
     ElMessage.warning('只有管理员可以编辑文章')
     return
   }
-  // 这里可以实现编辑功能
   ElMessage.info('文章编辑功能待实现')
 }
 
-// 处理点赞
 const handleLike = async () => {
   if (!currentUser.value) {
     ElMessage.warning('请先登录后再点赞')
@@ -382,45 +326,20 @@ const handleLike = async () => {
   }
 
   liking.value = true
-
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 300))
-
-    const likedArticles = [...getScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES)]
-    const index = likedArticles.indexOf(articleId.value)
-
-    if (index === -1) {
-      // 点赞
-      likedArticles.push(articleId.value)
-      liked.value = true
-      likeCount.value = setArticleLikeCount(articleId.value, likeCount.value + 1)
-      ElMessage.success('点赞成功')
-    } else {
-      // 取消点赞
-      likedArticles.splice(index, 1)
-      liked.value = false
-      likeCount.value = setArticleLikeCount(
-        articleId.value,
-        Math.max(0, likeCount.value - 1)
-      )
-      ElMessage.info('已取消点赞')
-    }
-
-    setScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES, likedArticles)
-
-    if (article.value) {
-      article.value.likes = likeCount.value
+    const result = await toggleLike(articleId.value)
+    if (result) {
+      liked.value = result.liked
+      likeCount.value = result.likes
+      ElMessage.success(result.liked ? '点赞成功' : '已取消点赞')
     }
   } catch (error) {
-    console.error('点赞失败:', error)
     ElMessage.error('操作失败')
   } finally {
     liking.value = false
   }
 }
 
-// 滚动到评论区
 const scrollToComments = () => {
   const commentsSection = document.getElementById('comments')
   if (commentsSection) {
@@ -428,8 +347,7 @@ const scrollToComments = () => {
   }
 }
 
-// 处理更多命令
-const handleMoreCommand = (command) => {
+const handleMoreCommand = async (command) => {
   switch (command) {
     case 'report':
       ElMessageBox.prompt('请输入举报原因', '举报文章', {
@@ -452,13 +370,11 @@ const handleMoreCommand = (command) => {
         return
       }
 
-      const bookmarks = [...getScopedArticleList(STORAGE_KEYS.BOOKMARKS)]
-      if (!bookmarks.includes(articleId.value)) {
-        bookmarks.push(articleId.value)
-        setScopedArticleList(STORAGE_KEYS.BOOKMARKS, bookmarks)
-        ElMessage.success('已收藏文章')
+      const result = await toggleBookmark(articleId.value)
+      if (result) {
+        ElMessage.success(result.bookmarked ? '已收藏文章' : '已取消收藏')
       } else {
-        ElMessage.info('文章已在收藏夹中')
+        ElMessage.error('操作失败')
       }
       break
   }
@@ -467,7 +383,6 @@ const handleMoreCommand = (command) => {
 // 处理评论排序变化
 const handleCommentSortChange = (sort) => {
   commentSort.value = sort
-  // 这里可以重新加载评论，或者让CommentList组件内部处理排序
   if (commentListRef.value) {
     commentListRef.value.refreshComments()
   }
@@ -475,19 +390,16 @@ const handleCommentSortChange = (sort) => {
 
 // 处理评论提交
 const handleCommentSubmit = () => {
-  // 刷新评论列表
   if (commentListRef.value) {
     commentListRef.value.refreshComments()
   }
-  // 更新评论数量
-  commentCount.value = getCommentsCount(articleId.value)
+  commentCount.value += 1
 }
 
 const handleCommentMutation = () => {
   if (commentListRef.value) {
     commentListRef.value.refreshComments()
   }
-  commentCount.value = getCommentsCount(articleId.value)
 }
 
 // 监听路由变化
@@ -496,15 +408,6 @@ watch(() => route.params.id, (newId) => {
     loadArticle()
   }
 }, { immediate: false })
-
-watch(
-  () => currentUser.value?.id,
-  () => {
-    liked.value = getScopedArticleList(STORAGE_KEYS.LIKED_ARTICLES).includes(
-      articleId.value
-    )
-  }
-)
 
 // 生命周期
 onMounted(() => {

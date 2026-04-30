@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-A personal blog built with Vue 3 + Element Plus, featuring 14 pages with simulated dynamic functionality (authentication, comments, admin panel) using client-side storage. Backed by a serverless API (Vercel Node.js) connected to a TiDB Cloud MySQL database for articles and categories. Deployed to GitHub Pages (frontend) and Vercel (API).
+A full-stack personal blog with Vue 3 + Element Plus frontend and Node.js serverless API backend. User auth (JWT + bcrypt), comments (nested, soft-delete), likes, bookmarks, and contact form are all backed by a TiDB Cloud MySQL database via a Vercel-deployed API. Deployed to GitHub Pages (frontend) and Vercel (API).
 
 ## Commands
 
@@ -14,6 +14,7 @@ A personal blog built with Vue 3 + Element Plus, featuring 14 pages with simulat
 
 ### Content & Quality
 - `npm run build:content` - Build articles from Markdown (`content/articles/*.md`) to `src/data/articles.json`
+- `npm run build:sql` - Generate SQL seed file (`api/articles-seed.sql`) from Markdown articles
 - `npm run lint` - Run ESLint code checking
 - `npm run format` - Format code with Prettier
 
@@ -31,29 +32,59 @@ A personal blog built with Vue 3 + Element Plus, featuring 14 pages with simulat
 ### Tech Stack
 - **Framework**: Vue 3 (Composition API, `<script setup>`)
 - **Build**: Vite 5.x
-- **Routing**: Vue Router 4.x (lazy-loaded routes, navigation guards)
-- **State**: Pinia 2.x
+- **Routing**: Vue Router 4.x (lazy-loaded routes, async navigation guards)
+- **State**: Pinia 2.x (API-backed stores with JWT interceptor)
 - **UI**: Element Plus 2.7 (full import in `main.js`) + ECharts 6
 - **Markdown**: markdown-it + gray-matter (build-time), marked (runtime)
-- **HTTP**: axios (API calls from frontend)
+- **HTTP**: axios (API client with JWT auth interceptor)
+- **Auth**: JWT (jsonwebtoken) + bcryptjs for password hashing
 - **Testing**: Vitest 4 + jsdom + @vue/test-utils
-- **Storage**: localStorage for simulated auth/comments; MySQL for articles
+- **Database**: TiDB Cloud MySQL (mysql2 driver with ssl)
 
 ### Frontend Layer (`src/`)
 Follows Vue 3 conventions with Composables and Pinia stores:
-- **Composables** (`useAuth`, `useComments`, `useArticles`) wrap business logic
-- **Stores** (Pinia: auth, comment, article) hold reactive state, synced to localStorage
-- **Router** has two guard levels: `meta.requiresAuth` (any logged-in user) and `meta.requiresAdmin` (admin role only)
+- **API Client** (`src/api/client.js`) — Axios instance with JWT interceptor (auto-attach token, 401 redirect)
+- **Composables** (`useAuth`, `useComments`, `useArticles`) wrap Pinia store logic
+- **Stores** (Pinia: auth, comment, article) hold reactive state, backed by API calls
+- **Router** has two guard levels: `meta.requiresAuth` (any logged-in user) and `meta.requiresAdmin` (admin role only), with async `restoreSession()` on navigation
 
 ### API Layer (`api/`)
 Serverless function deployed to Vercel (`@vercel/node` runtime):
-- **`api/index.js`** — Express-style request handler with CORS, routing, and MySQL queries
-  - `GET /api/articles` — Paginated article list (published only, with categories)
-  - `GET /api/articles/:slug` — Single article detail + increments view count
-  - `GET /api/categories` — All categories with article counts
-  - `GET /api/categories/:slug/articles` — Articles by category
-- **`api/db.js`** — MySQL connection pool (TiDB Cloud, env vars from `api/.env`)
+- **`api/index.js`** — Request router dispatching to route modules, CORS handling, body parsing
+- **`api/db.js`** — MySQL connection pool (TiDB Cloud, env vars from `api/.env`, TLS enabled)
+- **`api/middleware/auth.js`** — JWT sign/verify, `requireAuth` and `requireAdmin` guards
+- **`api/routes/auth.js`** — `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/profile`
+- **`api/routes/comments.js`** — Comment CRUD + sticky toggle + permanent delete
+- **`api/routes/likes.js`** — Article/comment like toggle, bookmark toggle, user bookmarks
+- **`api/routes/contact.js`** — Contact form submission + admin message list
+- **`api/schema.sql`** — Full DDL (8 tables: users, categories, articles, comments, comment_likes, article_likes, bookmarks, contact_messages)
+- **`api/seed.js`** — Seed script (initial users with bcrypt hashes + categories)
 - CORS whitelist: GitHub Pages domain + localhost dev ports
+
+#### API Endpoints
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/register` | No | Register new user |
+| POST | `/api/auth/login` | No | Login, returns JWT |
+| GET | `/api/auth/profile` | Yes | Current user profile |
+| GET | `/api/articles` | No | Paginated article list |
+| GET | `/api/articles/:slug` | No | Article detail + view count |
+| GET | `/api/categories` | No | Categories with counts |
+| GET | `/api/categories/:slug/articles` | No | Articles by category |
+| GET | `/api/articles/:slug/comments` | No | Article comments |
+| POST | `/api/articles/:slug/comments` | Yes | Add comment |
+| PUT | `/api/comments/:id` | Yes | Update comment (owner/admin) |
+| DELETE | `/api/comments/:id` | Yes | Soft-delete comment |
+| DELETE | `/api/comments/:id/permanent` | Admin | Permanently delete |
+| PUT | `/api/comments/:id/sticky` | Admin | Toggle sticky |
+| POST | `/api/articles/:slug/like` | Yes | Toggle article like |
+| GET | `/api/articles/:slug/like` | No | Get like count |
+| POST | `/api/comments/:id/like` | Yes | Toggle comment like |
+| POST | `/api/articles/:slug/bookmark` | Yes | Toggle bookmark |
+| GET | `/api/user/bookmarks` | Yes | User bookmarks |
+| POST | `/api/contact` | No | Submit contact form |
+| GET | `/api/contact` | Admin | List contact messages |
+| PUT | `/api/contact/:id/read` | Admin | Mark message as read |
 
 ### Deployment Topology
 ```
@@ -67,38 +98,51 @@ TiDB Cloud               ←  MySQL-compatible database
 ### Project Structure
 ```
 src/
-├── assets/styles/   # Global SCSS (main.scss)
+├── api/
+│   └── client.js        # Axios instance + JWT interceptor
+├── assets/styles/       # Global SCSS (main.scss)
 ├── components/
-│   ├── layout/      # AppLayout, Header, Footer
-│   ├── blog/        # ArticleCard, CommentList, MarkdownRenderer
-│   └── common/      # Carousel, BackToTop
-├── composables/     # useAuth, useComments, useArticles
-├── stores/          # Pinia: auth, comment, article
-├── views/           # 14 page components (lazy-loaded)
-├── constants/       # Storage keys, hardcoded users
-├── utils/           # Date formatting, storage helpers
-├── data/            # Generated article JSON (build output)
-└── router/index.js  # Route definitions + guards
+│   ├── admin/           # AdminChart, AdminStats, CommentManager, DataActions
+│   ├── layout/          # AppLayout, Header, Footer
+│   ├── blog/            # ArticleCard, CommentList, CommentForm, MarkdownRenderer
+│   └── common/          # Carousel, BackToTop
+├── composables/         # useAuth, useComments, useArticles
+├── stores/              # Pinia: auth, comment, article (API-backed)
+├── views/               # 14 page components (lazy-loaded)
+├── constants/           # Storage keys, hardcoded users (deprecated)
+├── utils/               # Date formatting, storage helpers
+├── data/                # Generated article JSON (build output)
+└── router/index.js      # Route definitions + async guards
 
 api/
-├── index.js         # Serverless API handler
-├── db.js            # MySQL connection pool
-└── .env             # Database credentials (do NOT commit)
+├── index.js             # Serverless API request router
+├── db.js                # MySQL connection pool (TiDB Cloud, TLS)
+├── schema.sql           # DDL for all 8 tables
+├── seed.js              # Seed script (users + categories)
+├── middleware/
+│   └── auth.js          # JWT sign/verify + auth guards
+├── routes/
+│   ├── auth.js          # Register, login, profile
+│   ├── comments.js      # Comment CRUD + sticky
+│   ├── likes.js         # Like + bookmark toggle
+│   └── contact.js       # Contact form + admin list
+└── .env                 # Database credentials (do NOT commit)
 
 content/
-├── articles/*.md    # 21 Markdown article source files
-└── assets/          # Article inline images
+├── articles/*.md        # 21 Markdown article source files
+└── assets/              # Article inline images
 
 scripts/
-├── build-content.js # MD → JSON article compiler
-└── check-health.js  # Project health checker
+├── build-content.js     # MD → JSON article compiler
+└── check-health.js      # Project health checker
 ```
 
 ### Key Data Flows
 - **Articles (API)**: TiDB Cloud → `api/index.js` → Frontend axios call → displayed in views
-- **Articles (static)**: `content/articles/*.md` → `build:content` → `src/data/articles.json` → fallback/offline data
-- **Comments**: User input → Pinia store → localStorage (`blog_comments`)
-- **Auth**: Login/register → Pinia store → localStorage token (hardcoded users + localStorage registrations)
+- **Articles (static)**: `content/articles/*.md` → `build:content` → `src/data/articles.json` → fallback when API unavailable
+- **Comments**: User input → axios POST → API → MySQL → Pinia cache → reactive views
+- **Auth**: Login/register → API → JWT token → localStorage → axios interceptor attaches to every request
+- **Likes/Bookmarks**: Toggle button → axios POST → API → MySQL → optimistic UI update
 
 ### Routing (14 Pages)
 | Path | Component | Auth Required |
@@ -129,12 +173,15 @@ scripts/
 1. **Homepage Carousel** (`Carousel.vue`) — Auto-rotate + manual controls
 2. **Back-to-Top Button** (`BackToTop.vue`) — Scroll-triggered visibility, smooth scroll
 
-### Security & Limitations (Demo Only)
-- Not production-ready — auth and comments are client-side simulation only
-- Hardcoded credentials in `src/constants/users.js` (admin/admin123, user1/user123, user2/user456)
-- No XSS/CSRF protection for comments
-- Data isolated per browser (localStorage, no cross-device sync)
+### Security
+- Passwords hashed with bcryptjs (10 salt rounds), never stored in plaintext
+- JWT-based authentication (7-day expiry, secret from `JWT_SECRET` env var)
+- Author-only + admin permission checks on comment edit/delete
+- Admin-only endpoints for comment management and contact messages
+- CORS restricted to explicit allowed origins
+- MySQL connection over TLS with TiDB Cloud
 - **API `.env` file contains real database credentials — never commit it**
+- `src/constants/users.js` is deprecated; initial users are seeded via `api/seed.js`
 
 ## Testing
 

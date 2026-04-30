@@ -83,8 +83,13 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
   const authStore = useAuthStore()
+
+  // 如果有 token 但还没验证，先恢复 session
+  if (authStore.token && !authStore.user) {
+    await authStore.restoreSession()
+  }
 
   // 检查是否需要认证
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
