@@ -17,12 +17,11 @@
         v-for="item in bookmarks"
         :key="item.id"
         class="blog-card bookmark-item"
-        @click="$router.push(`/article/${item.slug || item.id}`)"
       >
-        <div class="bookmark-cover" v-if="item.cover_image">
+        <div class="bookmark-cover" v-if="item.cover_image" @click="$router.push(`/article/${item.slug || item.id}`)">
           <img :src="item.cover_image" :alt="item.title" />
         </div>
-        <div class="bookmark-info">
+        <div class="bookmark-info" @click="$router.push(`/article/${item.slug || item.id}`)">
           <h3 class="bookmark-title">{{ item.title }}</h3>
           <p class="bookmark-summary">{{ item.summary || '暂无摘要' }}</p>
           <div class="bookmark-meta">
@@ -40,6 +39,14 @@
             </span>
           </div>
         </div>
+        <el-button
+          class="remove-btn"
+          type="danger"
+          size="small"
+          :icon="Delete"
+          circle
+          @click.stop="handleRemove(item)"
+        />
       </div>
     </div>
   </div>
@@ -47,17 +54,33 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { CollectionTag, Calendar } from '@element-plus/icons-vue'
+import { CollectionTag, Calendar, Delete } from '@element-plus/icons-vue'
 import { useArticles } from '@/composables/useArticles'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 
-const { getBookmarks } = useArticles()
+const { getBookmarks, toggleBookmark } = useArticles()
 const bookmarks = ref([])
 const loading = ref(true)
 
 const formatDate = (date) => {
   if (!date) return ''
   return dayjs(date).format('YYYY年MM月DD日 HH:mm')
+}
+
+const handleRemove = async (item) => {
+  try {
+    await ElMessageBox.confirm(`确定要取消收藏「${item.title}」吗？`, '取消收藏', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await toggleBookmark(item.slug || item.id)
+    bookmarks.value = bookmarks.value.filter(b => b.id !== item.id)
+    ElMessage.success('已取消收藏')
+  } catch {
+    // 用户取消
+  }
 }
 
 onMounted(async () => {
@@ -88,8 +111,8 @@ onMounted(async () => {
   .bookmark-item {
     display: flex;
     gap: var(--blog-spacing-lg);
-    cursor: pointer;
     transition: all 0.3s ease;
+    position: relative;
 
     &:hover {
       transform: translateY(-2px);
@@ -99,6 +122,18 @@ onMounted(async () => {
     @media (max-width: 768px) {
       flex-direction: column;
     }
+  }
+
+  .bookmark-info {
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .remove-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    flex-shrink: 0;
   }
 
   .bookmark-cover {

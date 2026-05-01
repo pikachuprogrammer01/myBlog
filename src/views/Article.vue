@@ -197,6 +197,7 @@
         class="comment-list"
         @comment-deleted="handleCommentMutation"
         @reply-submitted="handleCommentMutation"
+        @comments-loaded="(count) => commentCount = count"
       />
 
       <!-- 评论表单 -->

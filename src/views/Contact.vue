@@ -2,15 +2,22 @@
   <div class="contact">
     <h1 class="blog-page-title">
       <el-icon><Message /></el-icon>
-      联系
+      联系我
     </h1>
 
-    <div class="contact-layout">
+    <div v-if="!isAuthenticated" class="blog-card login-required">
+      <el-empty description="请先登录后再发送留言">
+        <el-button type="primary" @click="$router.push('/login')">去登录</el-button>
+      </el-empty>
+    </div>
+
+    <div v-else class="contact-layout">
       <div class="blog-card contact-card">
         <div class="card-header">
-          <h2>给我留言</h2>
-          <p>
-            这是一个前端模拟联系表单，提交后会保存在当前浏览器中，不会发送到真实邮箱。
+          <h2>发送留言</h2>
+          <p>留言将发送到站长邮箱，每人每天最多发送 10 条。</p>
+          <p v-if="remainingToday !== null" class="rate-hint">
+            今日还可发送 <strong>{{ remainingToday }}</strong> 条
           </p>
         </div>
 
@@ -21,16 +28,8 @@
           label-position="top"
           size="large"
         >
-          <el-form-item label="姓名" prop="name">
-            <el-input v-model="form.name" placeholder="请输入您的姓名" />
-          </el-form-item>
-
-          <el-form-item label="邮箱" prop="email">
-            <el-input v-model="form.email" placeholder="name@example.com" />
-          </el-form-item>
-
           <el-form-item label="主题" prop="subject">
-            <el-input v-model="form.subject" placeholder="想聊点什么？" />
+            <el-input v-model="form.subject" placeholder="想聊点什么？" maxlength="40" show-word-limit />
           </el-form-item>
 
           <el-form-item label="消息内容" prop="message">
@@ -50,7 +49,7 @@
               :loading="submitting"
               @click="handleSubmit"
             >
-              模拟提交
+              发送留言
             </el-button>
             <el-button @click="handleReset">清空表单</el-button>
           </div>
@@ -58,14 +57,11 @@
       </div>
 
       <div class="blog-card info-card">
-        <h2>联系说明</h2>
+        <h2>说明</h2>
         <ul class="info-list">
-          <li>支持必填项校验和邮箱格式校验。</li>
-          <li>提交后会模拟网络请求并给出成功提示。</li>
-          <li>当前浏览器已累计保存 {{ submissionCount }} 条联系记录。</li>
-          <li v-if="lastSubmissionText">
-            最近一次提交：{{ lastSubmissionText }}
-          </li>
+          <li>留言通过站长 QQ 邮箱发送，请认真填写。</li>
+          <li>每人每天最多发送 <strong>10 条</strong>留言。</li>
+          <li>主题长度 4-40 字符，内容长度 10-500 字符。</li>
         </ul>
       </div>
     </div>
@@ -77,36 +73,20 @@ import { computed, reactive, ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import { Message } from "@element-plus/icons-vue";
 import client from "@/api/client";
-import { formatDate } from "@/utils/date";
+import { useAuth } from "@/composables/useAuth";
+
+const { isAuthenticated } = useAuth();
 
 const formRef = ref(null);
 const submitting = ref(false);
+const remainingToday = ref(null);
 
 const form = reactive({
-  name: "",
-  email: "",
   subject: "",
   message: "",
 });
 
 const rules = {
-  name: [
-    { required: true, message: "请输入姓名", trigger: "blur" },
-    {
-      min: 2,
-      max: 20,
-      message: "姓名长度需在 2 到 20 个字符之间",
-      trigger: "blur",
-    },
-  ],
-  email: [
-    { required: true, message: "请输入邮箱", trigger: "blur" },
-    {
-      type: "email",
-      message: "请输入正确的邮箱格式",
-      trigger: ["blur", "change"],
-    },
-  ],
   subject: [
     { required: true, message: "请输入主题", trigger: "blur" },
     {
@@ -127,29 +107,14 @@ const rules = {
   ],
 };
 
-const messages = ref([]);
-
-const submissionCount = computed(() => messages.value.length);
-
-const lastSubmissionText = computed(() => {
-  const latestMessage = messages.value[0];
-  if (!latestMessage) {
-    return '';
-  }
-  return `${latestMessage.name} 于 ${formatDate(
-    latestMessage.created_at,
-    'YYYY-MM-DD HH:mm',
-  )} 提交了”${latestMessage.subject}”`;
-});
-
-async function loadMessages() {
+async function loadRemaining() {
   try {
-    const res = await client.get('/api/contact');
+    const res = await client.get("/api/contact/remaining");
     if (res.data.success) {
-      messages.value = res.data.data || [];
+      remainingToday.value = res.data.data.remaining;
     }
   } catch {
-    messages.value = [];
+    remainingToday.value = null;
   }
 }
 
@@ -158,19 +123,27 @@ async function handleSubmit() {
     await formRef.value?.validate();
     submitting.value = true;
 
-    await client.post('/api/contact', {
-      name: form.name,
-      email: form.email,
+    const res = await client.post("/api/contact", {
       subject: form.subject,
       message: form.message,
     });
 
-    ElMessage.success('留言提交成功');
+    ElMessage.success(res.data?.message || "留言已发送");
     resetForm();
-    await loadMessages();
+    // 更新剩余次数
+    if (res.data?.data?.remaining !== undefined) {
+      remainingToday.value = res.data.data.remaining;
+    } else if (remainingToday.value !== null) {
+      remainingToday.value = Math.max(0, remainingToday.value - 1);
+    }
   } catch (error) {
     if (error?.response) {
-      ElMessage.error(error.response.data?.message || '提交失败');
+      const msg = error.response.data?.message || "发送失败";
+      ElMessage.error(msg);
+      // 如果是节流错误，刷新剩余次数
+      if (error.response.status === 429) {
+        loadRemaining();
+      }
     }
   } finally {
     submitting.value = false;
@@ -178,8 +151,6 @@ async function handleSubmit() {
 }
 
 const resetForm = () => {
-  form.name = "";
-  form.email = "";
   form.subject = "";
   form.message = "";
   formRef.value?.clearValidate();
@@ -190,13 +161,19 @@ const handleReset = () => {
 };
 
 onMounted(() => {
-  loadMessages();
+  if (isAuthenticated.value) {
+    loadRemaining();
+  }
 });
 </script>
 
 <style scoped lang="scss">
 .contact {
   padding: var(--blog-spacing-md) 0;
+
+  .login-required {
+    text-align: center;
+  }
 
   .contact-layout {
     display: grid;
@@ -218,6 +195,11 @@ onMounted(() => {
       margin: 0;
       color: var(--blog-text-secondary);
       line-height: 1.7;
+    }
+
+    .rate-hint {
+      margin-top: var(--blog-spacing-xs);
+      color: var(--blog-primary-color);
     }
   }
 

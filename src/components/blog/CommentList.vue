@@ -292,7 +292,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['comment-deleted', 'comment-liked', 'reply-submitted'])
+const emit = defineEmits(['comment-deleted', 'comment-liked', 'reply-submitted', 'comments-loaded'])
 
 const { currentUser } = useAuth()
 const { loadComments: fetchComments, getCommentTree, deleteComment, likeComment } = useComments()
@@ -437,6 +437,7 @@ const loadComments = async () => {
     await fetchComments(props.articleId)
     const articleComments = getCommentTree(props.articleId)
     comments.value = articleComments.map(decorateComment)
+    emit('comments-loaded', totalComments.value)
     const maxPage = Math.max(1, totalPages.value || 1)
     if (currentPage.value > maxPage) {
       currentPage.value = maxPage

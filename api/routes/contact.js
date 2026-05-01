@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, requireAuth } = require('../middleware/auth');
 const pool = require('../db');
+
+const DAILY_LIMIT = 10;
 
 // QQ 邮箱 SMTP 配置
 const transporter = nodemailer.createTransport({
@@ -13,16 +15,13 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// POST /api/contact — 提交联系表单
+// POST /api/contact — 提交联系表单（需登录，每人每天最多 10 条）
 async function submitContact(req, res) {
-  const { name, email, subject, message } = req.body || {};
+  const user = await requireAuth(req, res);
+  if (!user) return;
 
-  if (!name || name.trim().length < 2) {
-    return res.status(400).json({ success: false, message: '姓名至少需要 2 个字符' });
-  }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ success: false, message: '请输入正确的邮箱格式' });
-  }
+  const { subject, message } = req.body || {};
+
   if (!subject || subject.trim().length < 4) {
     return res.status(400).json({ success: false, message: '主题至少需要 4 个字符' });
   }
@@ -31,9 +30,18 @@ async function submitContact(req, res) {
   }
 
   try {
+    // 节流：每人每天最多 DAILY_LIMIT 条
+    const [[{ cnt }]] = await pool.execute(
+      'SELECT COUNT(*) as cnt FROM contact_messages WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 DAY)',
+      [user.email || user.username]
+    );
+    if (cnt >= DAILY_LIMIT) {
+      return res.status(429).json({ success: false, message: `每人每天最多发送 ${DAILY_LIMIT} 条留言，请明天再试` });
+    }
+
     await pool.execute(
       'INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)',
-      [name.trim(), email.trim(), subject.trim(), message.trim()]
+      [user.username, user.email || user.username, subject.trim(), message.trim()]
     );
 
     // 异步发送邮件通知（不阻塞响应）
@@ -45,8 +53,8 @@ async function submitContact(req, res) {
         subject: `[博客留言] ${subject.trim()}`,
         html: `
           <h3>来自博客的新留言</h3>
-          <p><strong>姓名：</strong>${name.trim()}</p>
-          <p><strong>邮箱：</strong>${email.trim()}</p>
+          <p><strong>用户：</strong>${user.username}</p>
+          <p><strong>邮箱：</strong>${user.email || '未知'}</p>
           <p><strong>主题：</strong>${subject.trim()}</p>
           <p><strong>内容：</strong></p>
           <blockquote>${message.trim().replace(/\n/g, '<br>')}</blockquote>
@@ -56,7 +64,8 @@ async function submitContact(req, res) {
       }).catch((err) => console.error('发送邮件通知失败:', err.message));
     }
 
-    return res.status(201).json({ success: true, message: '留言提交成功' });
+    const remaining = Math.max(0, DAILY_LIMIT - (cnt + 1));
+    return res.status(201).json({ success: true, message: '留言已发送', data: { remaining } });
   } catch (error) {
     console.error('提交联系表单失败:', error);
     return res.status(500).json({ success: false, message: '提交失败，请稍后重试' });
@@ -93,4 +102,24 @@ async function markRead(req, res, id) {
   }
 }
 
-module.exports = { submitContact, getContactMessages, markRead };
+// GET /api/contact/remaining — 查询今日剩余可发送次数
+async function getRemaining(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+
+  try {
+    const [[{ cnt }]] = await pool.execute(
+      'SELECT COUNT(*) as cnt FROM contact_messages WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 DAY)',
+      [user.email || user.username]
+    );
+    return res.status(200).json({
+      success: true,
+      data: { remaining: Math.max(0, DAILY_LIMIT - cnt) },
+    });
+  } catch (error) {
+    console.error('查询剩余次数失败:', error);
+    return res.status(500).json({ success: false, message: '查询失败' });
+  }
+}
+
+module.exports = { submitContact, getContactMessages, markRead, getRemaining };

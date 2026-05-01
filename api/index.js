@@ -16,7 +16,7 @@ const {
   getUserBookmarks,
   getBookmarkStatus,
 } = require('./routes/likes');
-const { submitContact, getContactMessages, markRead } = require('./routes/contact');
+const { submitContact, getContactMessages, markRead, getRemaining } = require('./routes/contact');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -256,6 +256,9 @@ module.exports = async (req, res) => {
     }
 
     // ============ Contact Routes ============
+    if (pathname === '/api/contact/remaining' && req.method === 'GET') {
+      return await getRemaining(req, res);
+    }
     if (pathname === '/api/contact' && req.method === 'POST') {
       return await submitContact(req, res);
     }
