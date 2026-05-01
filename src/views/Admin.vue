@@ -46,8 +46,7 @@
     DataAnalysis,
     PieChart,
   } from "@element-plus/icons-vue";
-  import 'element-plus/theme-chalk/el-message-box.css';
-  import 'element-plus/theme-chalk/el-message.css';
+
   import adminClient from "@/api/client";
   import { getCache, setCache } from '@/utils/cache';
   import { STORAGE_KEYS } from '@/constants/storage-keys';

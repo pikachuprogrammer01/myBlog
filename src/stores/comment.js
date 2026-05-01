@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import client from '@/api/client';
 
 // Normalize API snake_case to component camelCase
@@ -160,9 +160,14 @@ export const useCommentStore = defineStore('comment', () => {
     return { success: false, message: res.data.message };
   }
 
+  const totalCommentCount = computed(() => {
+    return Object.values(articleComments.value).reduce((sum, arr) => sum + arr.length, 0);
+  });
+
   return {
     articleComments,
     loading,
+    totalCommentCount,
     loadComments,
     getCachedComments,
     getCommentTree,

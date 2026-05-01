@@ -86,8 +86,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import 'element-plus/theme-chalk/el-message-box.css';
-import 'element-plus/theme-chalk/el-message.css';
+
 import { useAuth } from '@/composables/useAuth'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'

@@ -62,7 +62,9 @@
 }
 
 // 重置和基础样式
-* {
+// Scoped to #app to avoid interfering with Element Plus overlays (ElMessageBox, ElMessage)
+// which are appended to document.body outside #app
+html, body, #app, #app * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;

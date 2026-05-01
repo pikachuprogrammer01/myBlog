@@ -43,6 +43,10 @@ export function useComments() {
     return commentStore.getCachedComments(articleSlug).length;
   }
 
+  function getTotalCommentCount() {
+    return commentStore.totalCommentCount;
+  }
+
   return {
     getComments,
     getCommentTree,
@@ -54,5 +58,6 @@ export function useComments() {
     toggleSticky,
     likeComment,
     getCommentsCount,
+    getTotalCommentCount,
   };
 }

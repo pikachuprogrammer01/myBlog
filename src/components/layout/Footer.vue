@@ -174,18 +174,18 @@
   import { useComments } from "@/composables/useComments";
 
   const { getArticles, getTotalViews } = useArticles();
-  const { getComments } = useComments();
+  const { getTotalCommentCount } = useComments();
 
   // 当前年份
   const currentYear = computed(() => new Date().getFullYear());
 
   const stats = computed(() => {
     const articles = getArticles();
-    const comments = getComments();
+    const totalComments = getTotalCommentCount();
 
     return {
       articles: articles.length,
-      comments: comments.length,
+      comments: totalComments,
       views: getTotalViews(),
       days: Math.floor(
         (Date.now() - new Date("2025-01-01").getTime()) / (1000 * 60 * 60 * 24),

@@ -101,8 +101,7 @@
   import { ref, computed, onMounted, onUnmounted } from "vue";
   import { useRouter } from "vue-router";
   import { ElMessage, ElMessageBox } from "element-plus";
-  import 'element-plus/theme-chalk/el-message-box.css';
-  import 'element-plus/theme-chalk/el-message.css';
+
   import {
     HomeFilled,
     Folder,
