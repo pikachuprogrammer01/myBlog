@@ -98,19 +98,17 @@ const router = createRouter({
 router.beforeEach(async (to, from) => {
   const authStore = useAuthStore()
 
-  // 如果有 token 但还没验证，先恢复 session
-  if (authStore.token && !authStore.user) {
-    await authStore.restoreSession()
-  }
-
-  // 检查是否需要认证
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return '/login'
-  }
-
-  // 检查是否需要管理员权限
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return '/'
+  // 仅对需要认证的路由验证 session；公开路由直接放行
+  if (to.meta.requiresAuth || to.meta.requiresAdmin) {
+    if (authStore.token && !authStore.user) {
+      await authStore.restoreSession()
+    }
+    if (!authStore.isAuthenticated) {
+      return '/login'
+    }
+    if (to.meta.requiresAdmin && !authStore.isAdmin) {
+      return '/'
+    }
   }
 
   return true

@@ -4,7 +4,15 @@ import { STORAGE_KEYS } from '@/constants/storage-keys';
 import client from '@/api/client';
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null);
+  const savedUser = (() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const user = ref(savedUser);
   const token = ref(localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || null);
   const loading = ref(false);
 
