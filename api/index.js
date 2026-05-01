@@ -359,6 +359,39 @@ module.exports = async (req, res) => {
       }
     }
 
+    // ============ Admin: Batch Delete Comments ============
+    if (pathname === '/api/admin/comments/batch-delete' && req.method === 'POST') {
+      const { requireAdmin } = require('./middleware/auth');
+      const admin = await requireAdmin(req, res);
+      if (!admin) return;
+
+      const { ids } = req.body || {};
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: '请提供要删除的评论 ID 列表' });
+      }
+
+      const numericIds = ids.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+      if (numericIds.length === 0) {
+        return res.status(400).json({ success: false, message: '无效的评论 ID' });
+      }
+
+      try {
+        const placeholders = numericIds.map(() => '?').join(',');
+        const [result] = await pool.execute(
+          `UPDATE comments SET is_deleted = 1 WHERE id IN (${placeholders})`,
+          numericIds
+        );
+        return res.status(200).json({
+          success: true,
+          message: `已删除 ${result.affectedRows} 条评论`,
+          data: { deletedCount: result.affectedRows },
+        });
+      } catch (error) {
+        console.error('批量删除评论失败:', error);
+        return res.status(500).json({ success: false, message: '批量删除评论失败' });
+      }
+    }
+
     // ============ Admin: Reset System ============
     if (pathname === '/api/admin/reset' && req.method === 'POST') {
       const { requireAdmin } = require('./middleware/auth');

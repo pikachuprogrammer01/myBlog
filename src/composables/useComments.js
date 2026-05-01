@@ -27,6 +27,10 @@ export function useComments() {
     return commentStore.deleteComment(commentId);
   }
 
+  function batchDeleteComments(ids) {
+    return commentStore.batchDeleteComments(ids);
+  }
+
   function permanentDeleteComment(commentId) {
     return commentStore.permanentDeleteComment(commentId);
   }
@@ -58,6 +62,7 @@ export function useComments() {
     addComment,
     updateComment,
     deleteComment,
+    batchDeleteComments,
     permanentDeleteComment,
     toggleSticky,
     likeComment,

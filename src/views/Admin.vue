@@ -48,8 +48,8 @@
   } from "@element-plus/icons-vue";
 
   import adminClient from "@/api/client";
-  import { getCache, setCache } from '@/utils/cache';
-  import { STORAGE_KEYS } from '@/constants/storage-keys';
+  import { getCache, setCache } from "@/utils/cache";
+  import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
   import { useComments } from "@/composables/useComments";
   import { useArticles } from "@/composables/useArticles";
@@ -60,7 +60,11 @@
 
   const router = useRouter();
   const { currentUser, logout } = useAuth();
-  const { deleteComment: deleteCommentApi, permanentDeleteComment: permanentDeleteApi } = useComments();
+  const {
+    deleteComment: deleteCommentApi,
+    batchDeleteComments: batchDeleteApi,
+    permanentDeleteComment: permanentDeleteApi,
+  } = useComments();
   const { getArticles } = useArticles();
 
   const comments = ref([]);
@@ -70,7 +74,9 @@
     if (articles.value.length === 0) return {};
     const categoryMap = {};
     articles.value.forEach((post) => {
-      const cats = post.categories || (post.category_name ? [post.category_name] : ["未分类"]);
+      const cats =
+        post.categories ||
+        (post.category_name ? [post.category_name] : ["未分类"]);
       cats.forEach((cat) => {
         categoryMap[cat] = (categoryMap[cat] || 0) + 1;
       });
@@ -125,7 +131,10 @@
         totalArticles: localArticles.length,
         totalComments: 0,
         totalUsers: 0,
-        totalViews: localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0),
+        totalViews: localArticles.reduce(
+          (sum, a) => sum + (a.view_count || a.views || 0),
+          0,
+        ),
       };
     }
 
@@ -136,16 +145,16 @@
     // Step 3: Refresh from API in background
     try {
       const [articlesRes, statsRes, commentsRes] = await Promise.all([
-        adminClient.get('/api/articles', { params: { limit: 100 } }),
-        adminClient.get('/api/admin/stats'),
-        adminClient.get('/api/admin/comments', { params: { limit: 100 } }),
+        adminClient.get("/api/articles", { params: { limit: 100 } }),
+        adminClient.get("/api/admin/stats"),
+        adminClient.get("/api/admin/comments", { params: { limit: 100 } }),
       ]);
 
       if (articlesRes.data.success) {
-        articles.value = articlesRes.data.data.map(a => ({
+        articles.value = articlesRes.data.data.map((a) => ({
           ...a,
           id: a.slug || a.id,
-          categories: a.category_name ? [a.category_name] : (a.categories || []),
+          categories: a.category_name ? [a.category_name] : a.categories || [],
         }));
       }
 
@@ -155,7 +164,7 @@
       }
 
       if (commentsRes.data.success) {
-        comments.value = commentsRes.data.data.map(c => ({
+        comments.value = commentsRes.data.data.map((c) => ({
           ...c,
           username: c.username || c.user_id,
           articleTitle: c.article_title,
@@ -164,20 +173,19 @@
         setCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS, comments.value);
       }
     } catch (error) {
-      console.error('API 加载管理数据失败，使用缓存数据:', error?.message || error);
+      console.error(
+        "API 加载管理数据失败，使用缓存数据:",
+        error?.message || error,
+      );
     }
   };
 
   const deleteComment = async (commentId) => {
-    try {
-      await ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      });
-    } catch {
-      return; // 用户取消删除
-    }
+    ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
 
     try {
       const result = await deleteCommentApi(commentId);
@@ -188,7 +196,10 @@
         ElMessage.error(result.message || "删除失败");
       }
     } catch (error) {
-      ElMessage.error("删除失败: " + (error.response?.data?.message || error.message || "网络错误"));
+      ElMessage.error(
+        "删除失败: " +
+          (error.response?.data?.message || error.message || "网络错误"),
+      );
     }
   };
 
@@ -206,26 +217,19 @@
         },
       );
     } catch {
-      return; // 用户取消删除
+      return; // 用户取消
     }
 
-    let successCount = 0;
-    let lastError = null;
-    for (const commentId of commentIds) {
-      try {
-        const result = await deleteCommentApi(commentId);
-        if (result.success) successCount++;
-        else lastError = result.message;
-      } catch (error) {
-        lastError = error.response?.data?.message || error.message;
+    try {
+      const result = await batchDeleteApi(commentIds);
+      if (result.success) {
+        ElMessage.success(`已删除 ${result.deletedCount || commentIds.length} 条评论`);
+        await loadData();
+      } else {
+        ElMessage.error(result.message || "批量删除失败");
       }
-    }
-
-    if (successCount > 0) {
-      ElMessage.success(`成功删除 ${successCount} 条评论`);
-      await loadData();
-    } else {
-      ElMessage.error(lastError || "删除失败");
+    } catch (error) {
+      ElMessage.error("批量删除失败: " + (error.response?.data?.message || error.message || "网络错误"));
     }
   };
 
@@ -262,16 +266,20 @@
     })
       .then(async () => {
         try {
-          const res = await adminClient.delete('/api/admin/comments');
+          const res = await adminClient.delete("/api/admin/comments");
           if (res.data.success) {
-            ElMessage.success(`已清空 ${res.data.data?.deletedCount || 0} 条评论`);
+            ElMessage.success(
+              `已清空 ${res.data.data?.deletedCount || 0} 条评论`,
+            );
             comments.value = [];
             await loadData();
           } else {
-            ElMessage.error(res.data.message || '清空失败');
+            ElMessage.error(res.data.message || "清空失败");
           }
         } catch (error) {
-          ElMessage.error('清空评论失败: ' + (error.response?.data?.message || error.message));
+          ElMessage.error(
+            "清空评论失败: " + (error.response?.data?.message || error.message),
+          );
         }
       })
       .catch(() => {});
@@ -285,21 +293,23 @@
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "error",
-      }
+      },
     )
       .then(async () => {
         try {
-          const res = await adminClient.post('/api/admin/reset');
+          const res = await adminClient.post("/api/admin/reset");
           if (res.data.success) {
-            ElMessage.success('系统数据已重置');
+            ElMessage.success("系统数据已重置");
           } else {
-            ElMessage.error(res.data.message || '重置失败');
+            ElMessage.error(res.data.message || "重置失败");
           }
         } catch (error) {
-          ElMessage.error('重置失败: ' + (error.response?.data?.message || error.message));
+          ElMessage.error(
+            "重置失败: " + (error.response?.data?.message || error.message),
+          );
         } finally {
           logout();
-          router.push('/');
+          router.push("/");
         }
       })
       .catch(() => {});

@@ -116,6 +116,20 @@ export const useCommentStore = defineStore('comment', () => {
     return { success: false, message: res.data.message };
   }
 
+  // 批量软删除评论（管理员）
+  async function batchDeleteComments(ids) {
+    const res = await client.post('/api/admin/comments/batch-delete', { ids });
+    if (res.data.success) {
+      Object.keys(articleComments.value).forEach((slug) => {
+        articleComments.value[slug] = articleComments.value[slug].filter(
+          (c) => !ids.includes(c.id)
+        );
+      });
+      return { success: true, deletedCount: res.data.data?.deletedCount };
+    }
+    return { success: false, message: res.data.message };
+  }
+
   // 永久删除评论（管理员）
   async function permanentDeleteComment(commentId) {
     const res = await client.delete(`/api/comments/${commentId}/permanent`);
@@ -189,6 +203,7 @@ export const useCommentStore = defineStore('comment', () => {
     addComment,
     updateComment,
     deleteComment,
+    batchDeleteComments,
     permanentDeleteComment,
     toggleSticky,
     likeComment,
