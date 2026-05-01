@@ -15,6 +15,7 @@ declare module 'vue' {
     AdminStats: typeof import('./components/admin/AdminStats.vue')['default']
     ArticleCard: typeof import('./components/blog/ArticleCard.vue')['default']
     ArticleList: typeof import('./components/blog/ArticleList.vue')['default']
+    ArticleStatsTable: typeof import('./components/admin/ArticleStatsTable.vue')['default']
     BackToTop: typeof import('./components/common/BackToTop.vue')['default']
     Carousel: typeof import('./components/common/Carousel.vue')['default']
     CommentForm: typeof import('./components/blog/CommentForm.vue')['default']
