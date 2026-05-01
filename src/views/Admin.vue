@@ -175,7 +175,11 @@
         cancelButtonText: "取消",
         type: "warning",
       });
+    } catch {
+      return; // 用户取消删除
+    }
 
+    try {
       const result = await deleteCommentApi(commentId);
       if (result.success) {
         ElMessage.success("评论已删除");
@@ -184,7 +188,7 @@
         ElMessage.error(result.message || "删除失败");
       }
     } catch (error) {
-      // 用户取消删除
+      ElMessage.error("删除失败: " + (error.response?.data?.message || error.message || "网络错误"));
     }
   };
 
@@ -201,17 +205,27 @@
           type: "warning",
         },
       );
+    } catch {
+      return; // 用户取消删除
+    }
 
-      let successCount = 0;
-      for (const commentId of commentIds) {
+    let successCount = 0;
+    let lastError = null;
+    for (const commentId of commentIds) {
+      try {
         const result = await deleteCommentApi(commentId);
         if (result.success) successCount++;
+        else lastError = result.message;
+      } catch (error) {
+        lastError = error.response?.data?.message || error.message;
       }
+    }
 
+    if (successCount > 0) {
       ElMessage.success(`成功删除 ${successCount} 条评论`);
       await loadData();
-    } catch (error) {
-      // 用户取消删除
+    } else {
+      ElMessage.error(lastError || "删除失败");
     }
   };
 
@@ -245,7 +259,6 @@
       confirmButtonText: "确定",
       cancelButtonText: "取消",
       type: "error",
-      confirmButtonClass: "el-button--danger",
     })
       .then(async () => {
         try {
@@ -272,8 +285,7 @@
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "error",
-        confirmButtonClass: "el-button--danger",
-      },
+      }
     )
       .then(async () => {
         try {

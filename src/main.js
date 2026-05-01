@@ -12,16 +12,23 @@ import 'element-plus/theme-chalk/el-message.css'
 // 导入全局样式
 import './assets/styles/main.scss'
 
-const app = createApp(App)
+async function init() {
+  const app = createApp(App)
 
-app.use(createPinia())
-app.use(router)
+  app.use(createPinia())
+  app.use(router)
 
-// GitHub Pages SPA 回退：从 404.html 恢复原始路径
-const redirect = sessionStorage.getItem('spa-redirect')
-if (redirect) {
-  sessionStorage.removeItem('spa-redirect')
-  router.replace(redirect)
+  // 等待路由初始导航完成
+  await router.isReady()
+
+  // GitHub Pages SPA 回退：从 404.html 恢复原始路径
+  const redirect = sessionStorage.getItem('spa-redirect')
+  if (redirect) {
+    sessionStorage.removeItem('spa-redirect')
+    await router.replace(redirect)
+  }
+
+  app.mount('#app')
 }
 
-app.mount('#app')
+init()
