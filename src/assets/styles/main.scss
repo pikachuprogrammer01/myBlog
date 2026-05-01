@@ -62,16 +62,18 @@
 }
 
 // 重置和基础样式
-* {
+// reset 仅作用于 #app，避免影响 Element Plus 弹窗组件
+//（ElMessageBox / ElDialog / ElDrawer 等 overlay 追加在 body 下）
+body {
   margin: 0;
   padding: 0;
 }
 
-// box-sizing 仅作用于 #app，避免影响 Element Plus 弹窗组件
-//（ElMessageBox / ElDialog / ElDrawer 等 overlay 追加在 body 下，依赖 content-box 计算尺寸）
 #app {
   box-sizing: border-box;
   *, *::before, *::after {
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
   }
 }
