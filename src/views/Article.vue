@@ -212,6 +212,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import 'element-plus/theme-chalk/el-message-box.css';
+import 'element-plus/theme-chalk/el-message.css';
 import {
   Calendar,
   View,

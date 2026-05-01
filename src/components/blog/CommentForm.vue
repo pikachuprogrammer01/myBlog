@@ -171,6 +171,8 @@
 <script setup>
   import { ref, computed, reactive, watch, nextTick } from "vue";
   import { ElMessage, ElMessageBox } from "element-plus";
+  import 'element-plus/theme-chalk/el-message-box.css';
+  import 'element-plus/theme-chalk/el-message.css';
   import { Link, Comment } from "@element-plus/icons-vue";
   import { useAuth } from "@/composables/useAuth";
   import { useComments } from "@/composables/useComments";

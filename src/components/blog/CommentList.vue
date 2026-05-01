@@ -230,6 +230,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import 'element-plus/theme-chalk/el-message-box.css';
+import 'element-plus/theme-chalk/el-message.css';
 import {
   ChatDotRound,
   ChatLineRound,

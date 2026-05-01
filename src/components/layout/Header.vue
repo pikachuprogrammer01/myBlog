@@ -100,7 +100,9 @@
 <script setup>
   import { ref, computed, onMounted, onUnmounted } from "vue";
   import { useRouter } from "vue-router";
-  import { ElMessage } from "element-plus";
+  import { ElMessage, ElMessageBox } from "element-plus";
+  import 'element-plus/theme-chalk/el-message-box.css';
+  import 'element-plus/theme-chalk/el-message.css';
   import {
     HomeFilled,
     Folder,
@@ -158,9 +160,17 @@
 
   // 退出登录
   const handleLogout = () => {
-    authLogout();
-    ElMessage.success("已退出登录");
-    router.push("/login");
+    ElMessageBox.confirm("确定要退出登录吗？", "退出确认", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    })
+      .then(() => {
+        authLogout();
+        ElMessage.success("已退出登录");
+        router.push("/login");
+      })
+      .catch(() => {});
   };
 
   const isScrolled = ref(false);

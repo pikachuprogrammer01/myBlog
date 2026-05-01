@@ -85,7 +85,9 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import 'element-plus/theme-chalk/el-message-box.css';
+import 'element-plus/theme-chalk/el-message.css';
 import { useAuth } from '@/composables/useAuth'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
@@ -131,9 +133,17 @@ async function loadProfile() {
 }
 
 const handleLogout = () => {
-  logout()
-  ElMessage.success('已退出登录')
-  router.push('/login')
+  ElMessageBox.confirm("确定要退出登录吗？", "退出确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
+    .then(() => {
+      logout()
+      ElMessage.success('已退出登录')
+      router.push('/login')
+    })
+    .catch(() => {})
 }
 
 onMounted(() => {
