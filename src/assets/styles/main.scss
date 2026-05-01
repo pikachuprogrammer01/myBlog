@@ -62,12 +62,18 @@
 }
 
 // 重置和基础样式
-// Scoped to #app to avoid interfering with Element Plus overlays (ElMessageBox, ElMessage)
-// which are appended to document.body outside #app
-html, body, #app, #app * {
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+// Element Plus 弹窗组件（ElMessageBox / ElDialog 等）的 overlay 追加在 body 下，
+// 其内部依赖 content-box 计算尺寸，需从全局 border-box 中排除，否则会导致按钮无法点击、内容截断
+.el-overlay {
+  &, * {
+    box-sizing: content-box;
+  }
 }
 
 html {
