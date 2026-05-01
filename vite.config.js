@@ -23,6 +23,14 @@ export default defineConfig(({ mode }) => {
       '@': resolve(root, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://myblog-api-five.vercel.app',
+        changeOrigin: true,
+      },
+    },
+  },
   css: {
     preprocessorOptions: {
       scss: {
