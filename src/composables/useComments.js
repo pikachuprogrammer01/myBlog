@@ -44,7 +44,11 @@ export function useComments() {
   }
 
   function getTotalCommentCount() {
-    return commentStore.totalCommentCount;
+    return commentStore.totalCount;
+  }
+
+  function loadTotalCommentCount() {
+    return commentStore.loadTotalCount();
   }
 
   return {
@@ -59,5 +63,6 @@ export function useComments() {
     likeComment,
     getCommentsCount,
     getTotalCommentCount,
+    loadTotalCommentCount,
   };
 }

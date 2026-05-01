@@ -164,10 +164,25 @@ export const useCommentStore = defineStore('comment', () => {
     return Object.values(articleComments.value).reduce((sum, arr) => sum + arr.length, 0);
   });
 
+  const totalCount = ref(0);
+
+  async function loadTotalCount() {
+    try {
+      const res = await client.get('/api/stats');
+      if (res.data.success) {
+        totalCount.value = res.data.data.totalComments;
+      }
+    } catch {
+      // Silently fail — footer will show 0
+    }
+  }
+
   return {
     articleComments,
     loading,
     totalCommentCount,
+    totalCount,
+    loadTotalCount,
     loadComments,
     getCachedComments,
     getCommentTree,

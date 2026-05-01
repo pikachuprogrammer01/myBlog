@@ -68,9 +68,11 @@
   box-sizing: border-box;
 }
 
-// Element Plus 弹窗组件（ElMessageBox / ElDialog 等）的 overlay 追加在 body 下，
+// Element Plus 弹窗组件（ElMessageBox / ElDialog / ElDrawer 等）的 overlay 追加在 body 下，
 // 其内部依赖 content-box 计算尺寸，需从全局 border-box 中排除，否则会导致按钮无法点击、内容截断
-.el-overlay {
+.el-overlay,
+.el-overlay-message-box,
+.el-overlay-dialog {
   &, * {
     box-sizing: content-box;
   }

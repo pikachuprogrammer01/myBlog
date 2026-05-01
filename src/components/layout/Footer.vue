@@ -145,7 +145,7 @@
 </template>
 
 <script setup>
-  import { computed } from "vue";
+  import { computed, onMounted } from "vue";
   import {
     InfoFilled,
     Platform,
@@ -174,7 +174,7 @@
   import { useComments } from "@/composables/useComments";
 
   const { getArticles, getTotalViews } = useArticles();
-  const { getTotalCommentCount } = useComments();
+  const { getTotalCommentCount, loadTotalCommentCount } = useComments();
 
   // 当前年份
   const currentYear = computed(() => new Date().getFullYear());
@@ -188,9 +188,13 @@
       comments: totalComments,
       views: getTotalViews(),
       days: Math.floor(
-        (Date.now() - new Date("2025-01-01").getTime()) / (1000 * 60 * 60 * 24),
+        (Date.now() - new Date("2025-09-01").getTime()) / (1000 * 60 * 60 * 24),
       ),
     };
+  });
+
+  onMounted(() => {
+    loadTotalCommentCount();
   });
 
   // 滚动到顶部
