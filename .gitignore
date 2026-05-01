@@ -1,6 +1,7 @@
-node_modules/**
-dist/**/**
+node_modules/
+dist/
 .env
 /api/.env
 .vercel
-**/*.sql
+*.sql
+.claude/
