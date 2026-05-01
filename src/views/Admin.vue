@@ -9,19 +9,26 @@
     </div>
 
     <div v-else class="admin-dashboard">
-      <AdminStats :stats="stats" />
+      <el-tabs v-model="activeTab" type="border-card">
+        <el-tab-pane label="数据概览" name="overview">
+          <AdminStats :stats="stats" />
+          <div class="blog-card">
+            <AdminChart v-if="articles.length > 0" :options="categoryOptions" />
+          </div>
+        </el-tab-pane>
 
-      <div class="blog-card">
-        <AdminChart v-if="articles.length > 0" :options="categoryOptions" />
-      </div>
+        <el-tab-pane label="文章数据" name="articles">
+          <ArticleStatsTable :articles="articleStats" />
+        </el-tab-pane>
 
-      <ArticleStatsTable :articles="articleStats" />
-
-      <CommentManager
-        :comments="comments"
-        @delete="deleteComment"
-        @batchDelete="batchDeleteComments"
-      />
+        <el-tab-pane label="评论管理" name="comments">
+          <CommentManager
+            :comments="comments"
+            @delete="deleteComment"
+            @batchDelete="batchDeleteComments"
+          />
+        </el-tab-pane>
+      </el-tabs>
 
       <DataActions
         @export="exportData"
@@ -36,18 +43,7 @@
   import { ref, computed, onMounted } from "vue";
   import { useRouter } from "vue-router";
   import { ElMessage, ElMessageBox } from "element-plus";
-  import {
-    Document,
-    ChatDotRound,
-    User,
-    View,
-    Download,
-    Delete,
-    Refresh,
-    Setting,
-    DataAnalysis,
-    PieChart,
-  } from "@element-plus/icons-vue";
+  import { Setting } from "@element-plus/icons-vue";
 
   import adminClient from "@/api/client";
   import { getCache, setCache } from "@/utils/cache";
@@ -70,6 +66,12 @@
   } = useComments();
   const { getArticles } = useArticles();
 
+  const confirmBase = {
+    appendTo: '#app',
+    lockScroll: false,
+  };
+
+  const activeTab = ref("overview");
   const comments = ref([]);
   const articles = ref([]);
   const articleStats = ref([]);
@@ -200,6 +202,7 @@
       confirmButtonText: "确定",
       cancelButtonText: "取消",
       type: "warning",
+      ...confirmBase,
     })
       .then(async () => {
         try {
@@ -234,6 +237,7 @@
           confirmButtonText: "确定",
           cancelButtonText: "取消",
           type: "warning",
+          ...confirmBase,
         },
       );
     } catch {
@@ -289,6 +293,7 @@
       confirmButtonText: "确定",
       cancelButtonText: "取消",
       type: "error",
+      ...confirmBase,
     })
       .then(async () => {
         try {
@@ -319,6 +324,7 @@
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "error",
+        ...confirmBase,
       },
     )
       .then(async () => {
@@ -356,62 +362,9 @@
     }
 
     .admin-dashboard {
-      .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: var(--blog-spacing-md);
-
-        h3 {
-          margin: 0;
-          font-size: 18px;
-          font-weight: 600;
-        }
-      }
-
-      .comment-content {
-        max-height: 60px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-      }
-
-      .charts-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-
-        .chart-item {
-          min-height: 350px;
-          padding: 15px;
-          :deep(.chart-container) {
-            height: 300px;
-          }
-          .chart-title {
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 14px;
-            color: #606266;
-          }
-        }
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: var(--blog-spacing-xl);
-        color: var(--blog-text-secondary);
-      }
-
-      .data-actions {
-        display: flex;
-        gap: var(--blog-spacing-md);
-        margin-bottom: var(--blog-spacing-md);
-      }
-
-      .warning-hint {
-        margin-top: var(--blog-spacing-md);
+      :deep(.el-tabs__content) {
+        padding: var(--blog-spacing-md);
+        overflow: visible;
       }
     }
   }

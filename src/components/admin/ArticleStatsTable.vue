@@ -4,11 +4,20 @@
       <h3>
         <el-icon><DataAnalysis /></el-icon> 文章数据明细
       </h3>
-      <span class="article-count">共 {{ articles.length }} 篇</span>
+      <div class="header-actions">
+        <span class="article-count">共 {{ articles.length }} 篇</span>
+        <el-button
+          v-if="zeroStatCount > 0"
+          size="small"
+          @click="showZeroStats = !showZeroStats"
+        >
+          {{ showZeroStats ? '收起' : '展开' }}零数据文章 ({{ zeroStatCount }})
+        </el-button>
+      </div>
     </div>
 
     <el-table
-      :data="articles"
+      :data="filteredArticles"
       stripe
       style="width: 100%"
       @sort-change="handleSortChange"
@@ -16,10 +25,10 @@
     >
       <el-table-column prop="title" label="文章标题" min-width="200" sortable="custom">
         <template #default="{ row }">
-          <a v-if="row.slug" :href="`/#/article/${row.slug}`" target="_blank" class="article-link">
-            {{ row.title }}
-          </a>
-          <span v-else>{{ row.title }}</span>
+          <el-tooltip :content="row.title" placement="top" :show-after="400">
+            <a v-if="row.slug" :href="`/#/article/${row.slug}`" target="_blank" class="article-link">{{ row.title }}</a>
+            <span v-else>{{ row.title }}</span>
+          </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="80" sortable="custom" align="center">
@@ -43,9 +52,10 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { DataAnalysis } from '@element-plus/icons-vue'
 
-defineProps({
+const props = defineProps({
   articles: {
     type: Array,
     default: () => [],
@@ -53,6 +63,19 @@ defineProps({
 })
 
 const emit = defineEmits(['sort-change'])
+
+const showZeroStats = ref(false)
+
+function isZeroStat(a) {
+  return (a.view_count || 0) === 0 && (a.likes || 0) === 0 && (a.comments || 0) === 0 && (a.bookmarks || 0) === 0
+}
+
+const zeroStatCount = computed(() => props.articles.filter(isZeroStat).length)
+
+const filteredArticles = computed(() => {
+  if (showZeroStats.value) return props.articles
+  return props.articles.filter((a) => !isZeroStat(a))
+})
 
 function handleSortChange(sort) {
   emit('sort-change', sort)
@@ -80,6 +103,12 @@ function formatDate(dateStr) {
     gap: 8px;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--blog-spacing-md);
+  }
+
   .article-count {
     font-size: 14px;
     color: var(--blog-text-secondary);
@@ -89,6 +118,10 @@ function formatDate(dateStr) {
 .article-link {
   color: var(--blog-primary-color);
   text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 
   &:hover {
     text-decoration: underline;
