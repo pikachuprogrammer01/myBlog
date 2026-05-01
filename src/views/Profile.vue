@@ -116,7 +116,14 @@ async function loadProfile() {
   try {
     const res = await client.get('/api/auth/profile')
     if (res.data.success) {
-      myComments.value = [] // API doesn't return comments list yet
+      const data = res.data.data
+      myComments.value = (data.comments || []).map(c => ({
+        id: c.id,
+        articleId: c.article_slug || c.article_id,
+        articleTitle: c.article_title,
+        content: c.content,
+        createdAt: c.created_at,
+      }))
     }
   } catch {
     // ignore

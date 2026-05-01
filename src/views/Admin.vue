@@ -112,14 +112,19 @@
     const localArticles = getArticles();
     articles.value = localArticles;
 
-    // 用本地数据计算基础统计
-    stats.value.totalArticles = localArticles.length;
-    stats.value.totalViews = localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0);
+    // 用本地数据计算基础统计（API 不可用时的回退）
+    stats.value = {
+      totalArticles: localArticles.length,
+      totalComments: 0,
+      totalUsers: 0,
+      totalViews: localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0),
+    };
 
-    // 尝试通过 API 获取实时数据
     try {
-      const [articlesRes] = await Promise.all([
+      const [articlesRes, statsRes, commentsRes] = await Promise.all([
         adminClient.get('/api/articles', { params: { limit: 100 } }),
+        adminClient.get('/api/admin/stats'),
+        adminClient.get('/api/admin/comments', { params: { limit: 100 } }),
       ]);
 
       if (articlesRes.data.success) {
@@ -128,14 +133,23 @@
           id: a.slug || a.id,
           categories: a.category_name ? [a.category_name] : (a.categories || []),
         }));
-        stats.value.totalArticles = articlesRes.data.pagination.total;
-        stats.value.totalViews = articlesRes.data.data.reduce((sum, a) => sum + (a.view_count || 0), 0);
+      }
+
+      if (statsRes.data.success) {
+        stats.value = statsRes.data.data;
+      }
+
+      if (commentsRes.data.success) {
+        comments.value = commentsRes.data.data.map(c => ({
+          ...c,
+          username: c.username || c.user_id,
+          articleTitle: c.article_title,
+          articleSlug: c.article_slug,
+        }));
       }
     } catch (error) {
       console.error('API 加载管理数据失败，使用本地数据:', error?.message || error);
     }
-
-    stats.value.totalComments = comments.value.length;
   };
 
   const deleteComment = async (commentId) => {

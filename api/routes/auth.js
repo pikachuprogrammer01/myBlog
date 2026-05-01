@@ -93,8 +93,19 @@ async function getProfile(req, res) {
   if (!user) return;
 
   try {
-    const [comments] = await pool.execute(
+    const [commentCount] = await pool.execute(
       'SELECT COUNT(*) as count FROM comments WHERE user_id = ? AND is_deleted = 0',
+      [user.id]
+    );
+
+    const [myComments] = await pool.execute(
+      `SELECT c.id, c.content, c.created_at, c.parent_id,
+              COALESCE(a.title, '(已删除)') as article_title, a.slug as article_slug
+       FROM comments c
+       LEFT JOIN articles a ON c.article_id = a.id
+       WHERE c.user_id = ? AND c.is_deleted = 0
+       ORDER BY c.created_at DESC
+       LIMIT 50`,
       [user.id]
     );
 
@@ -102,7 +113,8 @@ async function getProfile(req, res) {
       success: true,
       data: {
         ...user,
-        commentCount: comments[0].count,
+        commentCount: commentCount[0].count,
+        comments: myComments,
       },
     });
   } catch (error) {
