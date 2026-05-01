@@ -45,6 +45,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/bookmarks',
+    name: 'Bookmarks',
+    component: () => import('@/views/Bookmarks.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/tags',
     name: 'Tags',
     component: () => import('@/views/Tags.vue')

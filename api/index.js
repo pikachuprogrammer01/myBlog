@@ -14,6 +14,7 @@ const {
   toggleCommentLike,
   toggleBookmark,
   getUserBookmarks,
+  getBookmarkStatus,
 } = require('./routes/likes');
 const { submitContact, getContactMessages, markRead } = require('./routes/contact');
 
@@ -245,6 +246,10 @@ module.exports = async (req, res) => {
     if (pathname.match(/^\/api\/articles\/[^\/]+\/bookmark$/) && req.method === 'POST') {
       const articleSlug = pathname.split('/')[3];
       return await toggleBookmark(req, res, articleSlug);
+    }
+    if (pathname.match(/^\/api\/articles\/[^\/]+\/bookmark$/) && req.method === 'GET') {
+      const articleSlug = pathname.split('/')[3];
+      return await getBookmarkStatus(req, res, articleSlug);
     }
     if (pathname === '/api/user/bookmarks' && req.method === 'GET') {
       return await getUserBookmarks(req, res);

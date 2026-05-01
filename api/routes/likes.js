@@ -48,7 +48,7 @@ async function toggleArticleLike(req, res, articleSlug) {
   }
 }
 
-// GET /api/articles/:slug/like — 获取文章点赞状态
+// GET /api/articles/:slug/like — 获取文章点赞状态（含当前用户是否已点赞）
 async function getArticleLike(req, res, articleSlug) {
   try {
     const [articles] = await pool.execute(
@@ -65,7 +65,18 @@ async function getArticleLike(req, res, articleSlug) {
       [articleId]
     );
 
-    return res.status(200).json({ success: true, data: { likes: count[0].likes } });
+    let liked = false;
+    const { authMiddleware } = require('../middleware/auth');
+    const user = await authMiddleware(req, res);
+    if (user) {
+      const [rows] = await pool.execute(
+        'SELECT id FROM article_likes WHERE article_id = ? AND user_id = ?',
+        [articleId, user.id]
+      );
+      liked = rows.length > 0;
+    }
+
+    return res.status(200).json({ success: true, data: { likes: count[0].likes, liked } });
   } catch (error) {
     console.error('获取点赞数失败:', error);
     return res.status(500).json({ success: false, message: '获取失败' });
@@ -183,7 +194,7 @@ async function getUserBookmarks(req, res) {
   }
 }
 
-// GET /api/articles/:slug/bookmark — 获取文章收藏状态
+// GET /api/articles/:slug/bookmark — 获取文章收藏状态（含当前用户是否已收藏）
 async function getBookmarkStatus(req, res, articleSlug) {
   try {
     const [articles] = await pool.execute(
@@ -195,13 +206,23 @@ async function getBookmarkStatus(req, res, articleSlug) {
     }
     const articleId = articles[0].id;
 
-    // Non-auth: just return count
     const [count] = await pool.execute(
       'SELECT COUNT(*) as count FROM bookmarks WHERE article_id = ?',
       [articleId]
     );
 
-    return res.status(200).json({ success: true, data: { bookmarks: count[0].count } });
+    let bookmarked = false;
+    const { authMiddleware } = require('../middleware/auth');
+    const user = await authMiddleware(req, res);
+    if (user) {
+      const [rows] = await pool.execute(
+        'SELECT id FROM bookmarks WHERE article_id = ? AND user_id = ?',
+        [articleId, user.id]
+      );
+      bookmarked = rows.length > 0;
+    }
+
+    return res.status(200).json({ success: true, data: { bookmarks: count[0].count, bookmarked } });
   } catch (error) {
     console.error('获取收藏数失败:', error);
     return res.status(500).json({ success: false, message: '获取失败' });
