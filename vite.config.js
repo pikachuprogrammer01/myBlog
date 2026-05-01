@@ -52,6 +52,10 @@ export default defineConfig(({ mode }) => {
             if (id.includes('echarts') || id.includes('zrender')) {
               return 'vendor-echarts'
             }
+            // xlsx 仅管理后台导出使用，独立拆包
+            if (id.includes('xlsx') || id.includes('cfb') || id.includes('codepage') || id.includes('adler-32') || id.includes('crc-32') || id.includes('ssf') || id.includes('wmf') || id.includes('word')) {
+              return 'vendor-xlsx'
+            }
             // Vue 生态 + Element Plus + 其他依赖统一拆包，长期缓存
             return 'vendor'
           }

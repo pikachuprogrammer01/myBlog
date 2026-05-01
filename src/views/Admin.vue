@@ -265,23 +265,61 @@
 
   const exportData = async () => {
     try {
-      const data = {
-        stats: stats.value,
-        exportTime: new Date().toISOString(),
-      };
+      const { utils, writeFile } = await import("xlsx");
 
-      const dataStr = JSON.stringify(data, null, 2);
-      const dataBlob = new Blob([dataStr], { type: "application/json" });
-      const url = URL.createObjectURL(dataBlob);
+      const dateStr = new Date().toISOString().split("T")[0];
+      const wb = utils.book_new();
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `blog-data-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      if (activeTab.value === "overview") {
+        // Sheet 1: 数据概览
+        utils.book_append_sheet(
+          wb,
+          utils.json_to_sheet([
+            { 指标: "文章总数", 数值: stats.value.totalArticles },
+            { 指标: "评论总数", 数值: stats.value.totalComments },
+            { 指标: "用户总数", 数值: stats.value.totalUsers },
+            { 指标: "总阅读量", 数值: stats.value.totalViews },
+          ]),
+          "数据概览",
+        );
 
+        // Sheet 2: 分类统计（来自饼图数据）
+        const catData = (categoryOptions.value.series?.[0]?.data || []).map(
+          (d) => ({ 分类: d.name, 文章数: d.value }),
+        );
+        if (catData.length > 0) {
+          utils.book_append_sheet(
+            wb,
+            utils.json_to_sheet(catData),
+            "分类统计",
+          );
+        }
+      } else if (activeTab.value === "articles") {
+        const data = articleStats.value.map((a) => ({
+          文章标题: a.title,
+          状态: a.status === "published" ? "已发布" : "草稿",
+          浏览: a.view_count || 0,
+          点赞: a.likes || 0,
+          评论: a.comments || 0,
+          收藏: a.bookmarks || 0,
+          发布日期: a.created_at
+            ? new Date(a.created_at).toLocaleDateString("zh-CN")
+            : "-",
+        }));
+        utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章数据");
+      } else if (activeTab.value === "comments") {
+        const data = comments.value.map((c) => ({
+          用户: c.username || "-",
+          评论内容: c.content || "-",
+          所属文章: c.articleTitle || "-",
+          时间: c.created_at
+            ? new Date(c.created_at).toLocaleString("zh-CN")
+            : "-",
+        }));
+        utils.book_append_sheet(wb, utils.json_to_sheet(data), "评论管理");
+      }
+
+      writeFile(wb, `blog-data-${dateStr}.xlsx`);
       ElMessage.success("数据导出成功");
     } catch {
       ElMessage.error("导出失败");
