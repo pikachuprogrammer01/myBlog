@@ -44,8 +44,8 @@
 
   // 应用初始化时加载文章和分类（API 不可用时自动回退到静态 JSON）
   const articleStore = useArticleStore();
-  onMounted(() => {
-    articleStore.loadArticles();
+  onMounted(async () => {
+    await articleStore.loadArticles();
     articleStore.loadCategories();
   });
 

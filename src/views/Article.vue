@@ -263,6 +263,10 @@ const formatDate = (date) => {
 const loadArticle = async () => {
   loading.value = true
   try {
+    // 确保文章数据已加载（直接访问 /article/:id 时 Main.vue 的 loadArticles 可能尚未完成）
+    if (articleStore.articles.length === 0) {
+      await articleStore.loadArticles()
+    }
     article.value = getArticle(articleId.value)
 
     if (article.value) {

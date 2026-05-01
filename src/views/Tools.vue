@@ -9,8 +9,8 @@
 
     <div class="filter-section">
       <el-radio-group v-model="currentCategory" size="large">
-        <el-radio-button label="全部" />
-        <el-radio-button v-for="cat in categories" :key="cat" :label="cat" />
+        <el-radio-button value="全部">全部</el-radio-button>
+        <el-radio-button v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</el-radio-button>
       </el-radio-group>
     </div>
 
