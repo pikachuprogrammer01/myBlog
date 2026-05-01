@@ -217,19 +217,24 @@
         },
       );
     } catch {
-      return; // 用户取消
+      ElMessage.info("已取消批量删除");
     }
 
     try {
       const result = await batchDeleteApi(commentIds);
       if (result.success) {
-        ElMessage.success(`已删除 ${result.deletedCount || commentIds.length} 条评论`);
+        ElMessage.success(
+          `已删除 ${result.deletedCount || commentIds.length} 条评论`,
+        );
         await loadData();
       } else {
         ElMessage.error(result.message || "批量删除失败");
       }
     } catch (error) {
-      ElMessage.error("批量删除失败: " + (error.response?.data?.message || error.message || "网络错误"));
+      ElMessage.error(
+        "批量删除失败: " +
+          (error.response?.data?.message || error.message || "网络错误"),
+      );
     }
   };
 
