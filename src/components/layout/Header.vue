@@ -26,6 +26,10 @@
           <el-icon><Tools /></el-icon>
           实用工具
         </router-link>
+        <router-link to="/bookmarks" class="nav-link">
+          <el-icon><CollectionTag /></el-icon>
+          收藏
+        </router-link>
         <router-link to="/about" class="nav-link">
           <el-icon><User /></el-icon>
           关于我
@@ -113,6 +117,7 @@
     SwitchButton,
     CirclePlus,
     Reading,
+    CollectionTag,
   } from "@element-plus/icons-vue";
   import { useAuth } from "@/composables/useAuth";
 

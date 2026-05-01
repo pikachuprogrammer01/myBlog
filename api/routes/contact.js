@@ -1,5 +1,17 @@
+const nodemailer = require('nodemailer');
 const { requireAdmin } = require('../middleware/auth');
 const pool = require('../db');
+
+// QQ 邮箱 SMTP 配置
+const transporter = nodemailer.createTransport({
+  host: 'smtp.qq.com',
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.QQ_EMAIL_USER,
+    pass: process.env.QQ_EMAIL_PASS,
+  },
+});
 
 // POST /api/contact — 提交联系表单
 async function submitContact(req, res) {
@@ -23,6 +35,26 @@ async function submitContact(req, res) {
       'INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)',
       [name.trim(), email.trim(), subject.trim(), message.trim()]
     );
+
+    // 异步发送邮件通知（不阻塞响应）
+    if (process.env.QQ_EMAIL_USER && process.env.QQ_EMAIL_PASS) {
+      const notifyEmail = process.env.CONTACT_EMAIL || process.env.QQ_EMAIL_USER;
+      transporter.sendMail({
+        from: `"博客留言通知" <${process.env.QQ_EMAIL_USER}>`,
+        to: notifyEmail,
+        subject: `[博客留言] ${subject.trim()}`,
+        html: `
+          <h3>来自博客的新留言</h3>
+          <p><strong>姓名：</strong>${name.trim()}</p>
+          <p><strong>邮箱：</strong>${email.trim()}</p>
+          <p><strong>主题：</strong>${subject.trim()}</p>
+          <p><strong>内容：</strong></p>
+          <blockquote>${message.trim().replace(/\n/g, '<br>')}</blockquote>
+          <hr>
+          <p style="color:#909399;font-size:12px">此邮件由博客系统自动发送</p>
+        `,
+      }).catch((err) => console.error('发送邮件通知失败:', err.message));
+    }
 
     return res.status(201).json({ success: true, message: '留言提交成功' });
   } catch (error) {

@@ -201,12 +201,13 @@ export const useArticleStore = defineStore('article', () => {
     return null;
   }
 
-  async function getLikeCount(slug) {
+  async function getLikeStatus(slug) {
     try {
       const res = await client.get(`/api/articles/${slug}/like`);
-      return res.data.success ? res.data.data.likes : 0;
+      // API now returns { likes, liked } — liked is false if not authenticated
+      return res.data.success ? res.data.data : { likes: 0, liked: false };
     } catch {
-      return 0;
+      return { likes: 0, liked: false };
     }
   }
 
@@ -217,6 +218,15 @@ export const useArticleStore = defineStore('article', () => {
       return { bookmarked: res.data.data.bookmarked };
     }
     return null;
+  }
+
+  async function getBookmarkStatus(slug) {
+    try {
+      const res = await client.get(`/api/articles/${slug}/bookmark`);
+      return res.data.success ? res.data.data : { bookmarks: 0, bookmarked: false };
+    } catch {
+      return { bookmarks: 0, bookmarked: false };
+    }
   }
 
   async function getBookmarks() {
@@ -244,8 +254,9 @@ export const useArticleStore = defineStore('article', () => {
     getArticlesByCategory,
     getTotalViews,
     toggleLike,
-    getLikeCount,
+    getLikeStatus,
     toggleBookmark,
+    getBookmarkStatus,
     getBookmarks,
   };
 });

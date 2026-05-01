@@ -111,6 +111,14 @@
             <el-icon><Star /></el-icon>
             {{ liked ? '已点赞' : '点赞' }} ({{ likeCount }})
           </el-button>
+          <el-button
+            :type="bookmarked ? 'warning' : 'default'"
+            :loading="bookmarking"
+            @click="handleBookmark"
+          >
+            <el-icon><CollectionTag /></el-icon>
+            {{ bookmarked ? '已收藏' : '收藏' }}
+          </el-button>
           <el-button type="default" @click="scrollToComments">
             <el-icon><ChatDotRound /></el-icon>
             评论 ({{ commentCount }})
@@ -132,10 +140,6 @@
               <el-dropdown-item command="print">
                 <el-icon><Printer /></el-icon>
                 打印文章
-              </el-dropdown-item>
-              <el-dropdown-item command="bookmark">
-                <el-icon><Star /></el-icon>
-                收藏文章
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -223,7 +227,8 @@ import {
   ChatDotRound,
   ArrowDown,
   Warning,
-  Printer
+  Printer,
+  CollectionTag,
 } from '@element-plus/icons-vue'
 import client from '@/api/client'
 import { useArticleStore } from '@/stores/article'
@@ -238,7 +243,7 @@ const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const { currentUser } = useAuth()
-const { toggleLike, toggleBookmark, getLikeCount } = useArticles()
+const { toggleLike, toggleBookmark, getLikeStatus, getBookmarkStatus } = useArticles()
 
 // 路由参数
 const articleId = computed(() => route.params.id)
@@ -251,6 +256,8 @@ const nextArticle = ref(null)
 const liked = ref(false)
 const liking = ref(false)
 const likeCount = ref(0)
+const bookmarked = ref(false)
+const bookmarking = ref(false)
 const commentCount = ref(0)
 const commentSort = ref('latest')
 const commentListRef = ref(null)
@@ -290,8 +297,13 @@ const loadArticle = async () => {
       previousArticle.value = previous
       nextArticle.value = next
 
-      const likes = await getLikeCount(articleId.value)
-      likeCount.value = likes
+      const [likeStatus, bookmarkStatus] = await Promise.all([
+        getLikeStatus(articleId.value),
+        getBookmarkStatus(articleId.value),
+      ])
+      likeCount.value = likeStatus.likes
+      liked.value = likeStatus.liked
+      bookmarked.value = bookmarkStatus.bookmarked
     }
   } catch (error) {
     console.error('加载文章失败:', error)
@@ -360,6 +372,27 @@ const handleLike = async () => {
   }
 }
 
+const handleBookmark = async () => {
+  if (!currentUser.value) {
+    ElMessage.warning('请先登录后再收藏文章')
+    router.push('/login')
+    return
+  }
+
+  bookmarking.value = true
+  try {
+    const result = await toggleBookmark(articleId.value)
+    if (result) {
+      bookmarked.value = result.bookmarked
+      ElMessage.success(result.bookmarked ? '已收藏文章' : '已取消收藏')
+    }
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    bookmarking.value = false
+  }
+}
+
 const scrollToComments = () => {
   const commentsSection = document.getElementById('comments')
   if (commentsSection) {
@@ -382,20 +415,6 @@ const handleMoreCommand = async (command) => {
       break
     case 'print':
       window.print()
-      break
-    case 'bookmark':
-      if (!currentUser.value) {
-        ElMessage.warning('请先登录后再收藏文章')
-        router.push('/login')
-        return
-      }
-
-      const result = await toggleBookmark(articleId.value)
-      if (result) {
-        ElMessage.success(result.bookmarked ? '已收藏文章' : '已取消收藏')
-      } else {
-        ElMessage.error('操作失败')
-      }
       break
   }
 }

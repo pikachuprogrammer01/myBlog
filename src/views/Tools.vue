@@ -141,7 +141,7 @@
   });
 
   const openLink = (url) => {
-    window.open(url, "_blank");
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // 图标加载失败处理

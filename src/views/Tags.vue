@@ -20,9 +20,9 @@
         <el-tag
           v-for="tag in popularTags"
           :key="tag.tag"
-          :type="getTagType(tag.count)"
           class="interactive-tag"
           :class="{ 'is-active': selectedTag === tag.tag }"
+          :style="{ backgroundColor: getTagColor(tag.count), borderColor: getTagColor(tag.count), color: '#fff' }"
           @click="selectTag(tag.tag)"
         >
           <el-icon><PriceTag /></el-icon>
@@ -133,10 +133,21 @@ const filteredArticles = computed(() =>
   selectedTag.value ? getArticlesByTag(selectedTag.value) : [],
 );
 
-const getTagType = (count) => {
-  if (count > 8) return "danger";
-  if (count > 4) return "warning";
-  return "primary";
+const tagColors = [
+  '#409eff', // 蓝色
+  '#67c23a', // 绿色
+  '#e6a23c', // 橙色
+  '#f56c6c', // 红色
+  '#9b59b6', // 紫色
+  '#1abc9c', // 青色
+];
+
+const getTagColor = (count) => {
+  const max = Math.max(...allTags.value.map((t) => t.count), 1);
+  const ratio = count / max;
+  // 按百分比分配颜色：低热度蓝色 -> 高热度红色
+  const idx = Math.min(Math.floor(ratio * (tagColors.length - 1)), tagColors.length - 1);
+  return tagColors[idx];
 };
 
 const getTagPercentage = (count) => {

@@ -41,12 +41,16 @@ export function useArticles() {
     return articleStore.toggleLike(slug);
   }
 
-  function getLikeCount(slug) {
-    return articleStore.getLikeCount(slug);
+  function getLikeStatus(slug) {
+    return articleStore.getLikeStatus(slug);
   }
 
   function toggleBookmark(slug) {
     return articleStore.toggleBookmark(slug);
+  }
+
+  function getBookmarkStatus(slug) {
+    return articleStore.getBookmarkStatus(slug);
   }
 
   function getBookmarks() {
@@ -75,8 +79,9 @@ export function useArticles() {
     getArchive,
     getCategories,
     toggleLike,
-    getLikeCount,
+    getLikeStatus,
     toggleBookmark,
+    getBookmarkStatus,
     getBookmarks,
     getArticlesByTag,
     getArticlesByCategory,
