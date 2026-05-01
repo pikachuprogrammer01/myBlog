@@ -9,4 +9,8 @@ export const STORAGE_KEYS = {
   LIKED_ARTICLES: "blog_liked_articles",
   BOOKMARKS: "blog_bookmarks",
   CONTACT_MESSAGES: "blog_contact_messages",
+  CACHED_ARTICLES: 'blog_cached_articles',
+  CACHED_CATEGORIES: 'blog_cached_categories',
+  CACHED_ADMIN_STATS: 'blog_cached_admin_stats',
+  CACHED_ADMIN_COMMENTS: 'blog_cached_admin_comments',
 };

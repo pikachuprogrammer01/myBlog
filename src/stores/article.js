@@ -2,44 +2,88 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import client from '@/api/client';
 import articlesData from '@/data/articles.json';
+import { getCache, setCache } from '@/utils/cache';
+import { STORAGE_KEYS } from '@/constants/storage-keys';
 
 export const useArticleStore = defineStore('article', () => {
   const articles = ref([]);
   const categories = ref([]);
   const loading = ref(false);
+  const lastFetched = ref(0);
+  const fetchPromise = ref(null);
+  const CACHE_TTL = 5 * 60 * 1000;
 
-  // Load articles from API, fallback to static JSON
-  async function loadArticles() {
-    loading.value = true;
-    try {
-      const res = await client.get('/api/articles', { params: { limit: 100 } });
-      if (res.data.success) {
-        articles.value = res.data.data.map((a) => ({
-          ...a,
-          id: a.slug || a.id, // Use slug as id for compatibility
-          date: a.created_at,
-          excerpt: a.summary,
-          cover: a.cover_image,
-          categories: a.category_name ? [a.category_name] : [],
-        }));
-        return;
-      }
-    } catch {
-      // Fallback to static data
-    } finally {
-      loading.value = false;
-    }
-    // Static fallback
-    articles.value = articlesData.map((a) => ({
+  function mapArticle(a) {
+    return {
       ...a,
-      views: 0,
-      likes: 0,
-      categories: Array.isArray(a.categories) ? a.categories : a.category ? [a.category] : ['未分类'],
-    }));
+      id: a.slug || a.id,
+      date: a.created_at,
+      excerpt: a.summary,
+      cover: a.cover_image,
+      categories: a.category_name ? [a.category_name] : [],
+    };
   }
 
-  // Load categories from API
-  async function loadCategories() {
+  // Load articles: cache-first → static JSON → API refresh in background
+  async function loadArticles(force = false) {
+    // Deduplication: reuse in-flight request
+    if (fetchPromise.value) return fetchPromise.value;
+
+    // Freshness check
+    if (!force && articles.value.length > 0 && Date.now() - lastFetched.value < CACHE_TTL) {
+      return;
+    }
+
+    // Step 1: localStorage cache → immediate render
+    const cached = getCache(STORAGE_KEYS.CACHED_ARTICLES);
+    if (cached && cached.length > 0) {
+      articles.value = cached;
+      loading.value = false;
+    }
+
+    // Step 2: static JSON baseline if still empty
+    if (articles.value.length === 0) {
+      loading.value = true;
+      articles.value = articlesData.map((a) => ({
+        ...a,
+        views: 0,
+        likes: 0,
+        categories: Array.isArray(a.categories) ? a.categories : a.category ? [a.category] : ['未分类'],
+      }));
+      loading.value = false;
+    }
+
+    // Step 3: API refresh in background (stale-while-revalidate)
+    const promise = (async () => {
+      try {
+        const res = await client.get('/api/articles', { params: { limit: 100 } });
+        if (res.data.success) {
+          articles.value = res.data.data.map(mapArticle);
+          setCache(STORAGE_KEYS.CACHED_ARTICLES, articles.value);
+          lastFetched.value = Date.now();
+        }
+      } catch {
+        // Keep whatever is already displayed
+      } finally {
+        fetchPromise.value = null;
+      }
+    })();
+
+    fetchPromise.value = promise;
+    return promise;
+  }
+
+  // Load categories with cache-first pattern
+  async function loadCategories(force = false) {
+    if (!force && categories.value.length > 0 && Date.now() - lastFetched.value < CACHE_TTL) {
+      return;
+    }
+
+    const cached = getCache(STORAGE_KEYS.CACHED_CATEGORIES);
+    if (cached && cached.length > 0) {
+      categories.value = cached;
+    }
+
     try {
       const res = await client.get('/api/categories');
       if (res.data.success) {
@@ -49,10 +93,11 @@ export const useArticleStore = defineStore('article', () => {
           count: c.article_count,
           slug: c.slug,
         }));
-        return;
+        setCache(STORAGE_KEYS.CACHED_CATEGORIES, categories.value);
+        lastFetched.value = Date.now();
       }
     } catch {
-      // Fallback: derive from articles
+      // Keep cached data
     }
   }
 

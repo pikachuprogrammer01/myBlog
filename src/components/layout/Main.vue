@@ -33,34 +33,21 @@
 </template>
 
 <script setup>
-  import { ref, watch, onMounted } from "vue";
-  import { useRoute } from "vue-router";
+  import { ref, onMounted } from "vue";
   import { Loading } from "@element-plus/icons-vue";
   import { useArticleStore } from "@/stores/article";
   import BackToTop from "@/components/common/BackToTop.vue";
 
-  const route = useRoute();
   const loading = ref(false);
 
-  // 应用初始化时加载文章和分类（API 不可用时自动回退到静态 JSON）
+  // 应用初始化时并行加载文章和分类（缓存优先，API 后台刷新）
   const articleStore = useArticleStore();
-  onMounted(async () => {
-    await articleStore.loadArticles();
-    articleStore.loadCategories();
+  onMounted(() => {
+    Promise.all([
+      articleStore.loadArticles(),
+      articleStore.loadCategories(),
+    ]);
   });
-
-  // 监听路由变化显示加载状态
-  watch(
-    () => route.path,
-    (newPath, oldPath) => {
-      if (newPath !== oldPath) {
-        loading.value = true;
-        setTimeout(() => {
-          loading.value = false;
-        }, 300); // 模拟加载延迟
-      }
-    },
-  );
 </script>
 
 <style scoped lang="scss">

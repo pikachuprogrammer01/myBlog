@@ -262,45 +262,88 @@ module.exports = async (req, res) => {
       }
     }
 
-    if (pathname === '/api/admin/comments' && req.method === 'GET') {
+    if (pathname === '/api/admin/comments') {
+      const { requireAdmin } = require('./middleware/auth');
+      const admin = await requireAdmin(req, res);
+      if (!admin) return;
+
+      // DELETE — 清空所有评论（软删除）
+      if (req.method === 'DELETE') {
+        try {
+          const [result] = await pool.execute(
+            'UPDATE comments SET is_deleted = 1 WHERE is_deleted = 0'
+          );
+          return res.status(200).json({
+            success: true,
+            message: '所有评论已清空',
+            data: { deletedCount: result.affectedRows },
+          });
+        } catch (error) {
+          console.error('清空评论失败:', error);
+          return res.status(500).json({ success: false, message: '清空评论失败' });
+        }
+      }
+
+      // GET — 获取评论列表
+      if (req.method === 'GET') {
+        try {
+          const page = parseInt(searchParams.get('page')) || 1;
+          const rawLimit = parseInt(searchParams.get('limit')) || 20;
+          const limit = Math.min(100, Math.max(1, rawLimit));
+          const offset = Math.max(0, (page - 1) * limit);
+
+          const [rows] = await pool.execute(
+            `SELECT c.id, c.article_id, c.parent_id, c.content, c.is_sticky, c.is_deleted,
+                    c.created_at, c.updated_at,
+                    u.id as user_id, u.username, u.role as user_role,
+                    COALESCE(a.title, '(已删除)') as article_title, a.slug as article_slug
+             FROM comments c
+             JOIN users u ON c.user_id = u.id
+             LEFT JOIN articles a ON c.article_id = a.id
+             WHERE c.is_deleted = 0
+             ORDER BY c.created_at DESC
+             LIMIT ${limit} OFFSET ${offset}`
+          );
+
+          const [[{ total }]] = await pool.execute('SELECT COUNT(*) as total FROM comments WHERE is_deleted = 0');
+
+          return res.status(200).json({
+            success: true,
+            data: rows,
+            pagination: {
+              page,
+              limit,
+              total: Number(total),
+              totalPages: Math.ceil(Number(total) / limit),
+            },
+          });
+        } catch (error) {
+          console.error('获取评论列表失败:', error);
+          return res.status(500).json({ success: false, message: '获取评论列表失败' });
+        }
+      }
+    }
+
+    // ============ Admin: Reset System ============
+    if (pathname === '/api/admin/reset' && req.method === 'POST') {
       const { requireAdmin } = require('./middleware/auth');
       const admin = await requireAdmin(req, res);
       if (!admin) return;
 
       try {
-        const page = parseInt(searchParams.get('page')) || 1;
-        const rawLimit = parseInt(searchParams.get('limit')) || 20;
-        const limit = Math.min(100, Math.max(1, rawLimit));
-        const offset = Math.max(0, (page - 1) * limit);
-
-        const [rows] = await pool.execute(
-          `SELECT c.id, c.article_id, c.parent_id, c.content, c.is_sticky, c.is_deleted,
-                  c.created_at, c.updated_at,
-                  u.id as user_id, u.username, u.role as user_role,
-                  COALESCE(a.title, '(已删除)') as article_title, a.slug as article_slug
-           FROM comments c
-           JOIN users u ON c.user_id = u.id
-           LEFT JOIN articles a ON c.article_id = a.id
-           WHERE c.is_deleted = 0
-           ORDER BY c.created_at DESC
-           LIMIT ${limit} OFFSET ${offset}`
-        );
-
-        const [[{ total }]] = await pool.execute('SELECT COUNT(*) as total FROM comments WHERE is_deleted = 0');
+        await pool.execute('UPDATE comments SET is_deleted = 1');
+        await pool.execute('DELETE FROM article_likes');
+        await pool.execute('DELETE FROM comment_likes');
+        await pool.execute('DELETE FROM bookmarks');
+        await pool.execute('DELETE FROM contact_messages');
 
         return res.status(200).json({
           success: true,
-          data: rows,
-          pagination: {
-            page,
-            limit,
-            total: Number(total),
-            totalPages: Math.ceil(Number(total) / limit),
-          },
+          message: '系统数据已重置（用户和文章已保留）',
         });
       } catch (error) {
-        console.error('获取评论列表失败:', error);
-        return res.status(500).json({ success: false, message: '获取评论列表失败' });
+        console.error('重置系统数据失败:', error);
+        return res.status(500).json({ success: false, message: '重置系统数据失败' });
       }
     }
 

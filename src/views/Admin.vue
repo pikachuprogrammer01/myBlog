@@ -47,6 +47,8 @@
     PieChart,
   } from "@element-plus/icons-vue";
   import adminClient from "@/api/client";
+  import { getCache, setCache } from '@/utils/cache';
+  import { STORAGE_KEYS } from '@/constants/storage-keys';
   import { useAuth } from "@/composables/useAuth";
   import { useComments } from "@/composables/useComments";
   import { useArticles } from "@/composables/useArticles";
@@ -62,7 +64,6 @@
 
   const comments = ref([]);
   const articles = ref([]);
-  const selectedComments = ref([]);
 
   const categoryOptions = computed(() => {
     if (articles.value.length === 0) return {};
@@ -108,18 +109,30 @@
   const loadData = async () => {
     if (!isAdmin.value) return;
 
-    // 先从 store 获取本地数据作为回退
+    // Step 1: Show article store data immediately
     const localArticles = getArticles();
     articles.value = localArticles;
 
-    // 用本地数据计算基础统计（API 不可用时的回退）
-    stats.value = {
-      totalArticles: localArticles.length,
-      totalComments: 0,
-      totalUsers: 0,
-      totalViews: localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0),
-    };
+    // Step 2: Show cached stats & comments from previous admin visit
+    const cachedStats = getCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
+    const cachedComments = getCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
 
+    if (cachedStats) {
+      stats.value = cachedStats;
+    } else {
+      stats.value = {
+        totalArticles: localArticles.length,
+        totalComments: 0,
+        totalUsers: 0,
+        totalViews: localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0),
+      };
+    }
+
+    if (cachedComments) {
+      comments.value = cachedComments;
+    }
+
+    // Step 3: Refresh from API in background
     try {
       const [articlesRes, statsRes, commentsRes] = await Promise.all([
         adminClient.get('/api/articles', { params: { limit: 100 } }),
@@ -137,6 +150,7 @@
 
       if (statsRes.data.success) {
         stats.value = statsRes.data.data;
+        setCache(STORAGE_KEYS.CACHED_ADMIN_STATS, stats.value);
       }
 
       if (commentsRes.data.success) {
@@ -146,9 +160,10 @@
           articleTitle: c.article_title,
           articleSlug: c.article_slug,
         }));
+        setCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS, comments.value);
       }
     } catch (error) {
-      console.error('API 加载管理数据失败，使用本地数据:', error?.message || error);
+      console.error('API 加载管理数据失败，使用缓存数据:', error?.message || error);
     }
   };
 
@@ -172,12 +187,12 @@
     }
   };
 
-  const batchDeleteComments = async () => {
-    if (selectedComments.value.length === 0) return;
+  const batchDeleteComments = async (commentIds) => {
+    if (!commentIds || commentIds.length === 0) return;
 
     try {
       await ElMessageBox.confirm(
-        `确定要删除选中的 ${selectedComments.value.length} 条评论吗？`,
+        `确定要删除选中的 ${commentIds.length} 条评论吗？`,
         "批量删除确认",
         {
           confirmButtonText: "确定",
@@ -187,13 +202,12 @@
       );
 
       let successCount = 0;
-      for (const commentId of selectedComments.value) {
+      for (const commentId of commentIds) {
         const result = await deleteCommentApi(commentId);
         if (result.success) successCount++;
       }
 
       ElMessage.success(`成功删除 ${successCount} 条评论`);
-      selectedComments.value = [];
       await loadData();
     } catch (error) {
       // 用户取消删除
@@ -233,15 +247,25 @@
       confirmButtonClass: "el-button--danger",
     })
       .then(async () => {
-        // Comments are cleared per-article now; this would need a dedicated admin endpoint
-        ElMessage.info("清空评论功能需通过数据库操作完成");
+        try {
+          const res = await adminClient.delete('/api/admin/comments');
+          if (res.data.success) {
+            ElMessage.success(`已清空 ${res.data.data?.deletedCount || 0} 条评论`);
+            comments.value = [];
+            await loadData();
+          } else {
+            ElMessage.error(res.data.message || '清空失败');
+          }
+        } catch (error) {
+          ElMessage.error('清空评论失败: ' + (error.response?.data?.message || error.message));
+        }
       })
       .catch(() => {});
   };
 
   const resetAllData = () => {
     ElMessageBox.confirm(
-      "确定要重置所有数据吗？这是破坏性操作！",
+      "确定要重置所有数据吗？这是破坏性操作！将清空所有评论、点赞、收藏和联系消息。用户和文章数据将保留。",
       "重置确认",
       {
         confirmButtonText: "确定",
@@ -250,10 +274,20 @@
         confirmButtonClass: "el-button--danger",
       },
     )
-      .then(() => {
-        logout();
-        ElMessage.success("已退出登录");
-        router.push("/");
+      .then(async () => {
+        try {
+          const res = await adminClient.post('/api/admin/reset');
+          if (res.data.success) {
+            ElMessage.success('系统数据已重置');
+          } else {
+            ElMessage.error(res.data.message || '重置失败');
+          }
+        } catch (error) {
+          ElMessage.error('重置失败: ' + (error.response?.data?.message || error.message));
+        } finally {
+          logout();
+          router.push('/');
+        }
       })
       .catch(() => {});
   };
