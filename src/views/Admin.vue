@@ -180,27 +180,32 @@
     }
   };
 
-  const deleteComment = async (commentId) => {
+  const deleteComment = (commentId) => {
     ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {
       confirmButtonText: "确定",
       cancelButtonText: "取消",
       type: "warning",
-    });
-
-    try {
-      const result = await deleteCommentApi(commentId);
-      if (result.success) {
-        ElMessage.success("评论已删除");
-        await loadData();
-      } else {
-        ElMessage.error(result.message || "删除失败");
-      }
-    } catch (error) {
-      ElMessage.error(
-        "删除失败: " +
-          (error.response?.data?.message || error.message || "网络错误"),
-      );
-    }
+    })
+      .then(async () => {
+        try {
+          const result = await deleteCommentApi(commentId);
+          if (result.success) {
+            ElMessage.success("评论已删除");
+            await loadData();
+          } else {
+            ElMessage.error(result.message || "删除失败");
+          }
+        } catch (error) {
+          ElMessage.error(
+            "删除失败: " +
+              (error.response?.data?.message || error.message || "网络错误"),
+          );
+        }
+      })
+      .catch(() => {
+        ElMessage.info("已取消删除");
+        return;
+      });
   };
 
   const batchDeleteComments = async (commentIds) => {
@@ -218,6 +223,7 @@
       );
     } catch {
       ElMessage.info("已取消批量删除");
+      return;
     }
 
     try {
