@@ -224,6 +224,7 @@ import {
   Warning,
   Printer
 } from '@element-plus/icons-vue'
+import client from '@/api/client'
 import { useArticleStore } from '@/stores/article'
 import { useAuth } from '@/composables/useAuth'
 import { useArticles } from '@/composables/useArticles'
@@ -236,7 +237,7 @@ const route = useRoute()
 const router = useRouter()
 const articleStore = useArticleStore()
 const { currentUser } = useAuth()
-const { getArticle, toggleLike, toggleBookmark, getLikeCount } = useArticles()
+const { toggleLike, toggleBookmark, getLikeCount } = useArticles()
 
 // 路由参数
 const articleId = computed(() => route.params.id)
@@ -263,11 +264,25 @@ const formatDate = (date) => {
 const loadArticle = async () => {
   loading.value = true
   try {
-    // 确保文章数据已加载（直接访问 /article/:id 时 Main.vue 的 loadArticles 可能尚未完成）
+    // 从 API 获取完整文章数据（列表接口不含 content 字段，必须调用单篇文章接口）
+    const res = await client.get(`/api/articles/${articleId.value}`)
+    if (res.data.success) {
+      const data = res.data.data
+      article.value = {
+        ...data,
+        id: data.slug || data.id,
+        date: data.created_at,
+        excerpt: data.summary,
+        cover: data.cover_image,
+        views: data.view_count,
+        categories: data.category_name ? [data.category_name] : [],
+      }
+    }
+
+    // 确保文章列表已加载（用于上一篇/下一篇导航）
     if (articleStore.articles.length === 0) {
       await articleStore.loadArticles()
     }
-    article.value = getArticle(articleId.value)
 
     if (article.value) {
       const { previous, next } = articleStore.getPreviousNextArticles(articleId.value)
