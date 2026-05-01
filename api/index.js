@@ -271,6 +271,33 @@ module.exports = async (req, res) => {
     }
 
     // ============ Admin Routes ============
+
+    // GET /api/admin/articles-stats — 每篇文章的点赞/评论/浏览/收藏数
+    if (pathname === '/api/admin/articles-stats' && req.method === 'GET') {
+      const { requireAdmin } = require('./middleware/auth');
+      const admin = await requireAdmin(req, res);
+      if (!admin) return;
+
+      try {
+        const [rows] = await pool.execute(
+          `SELECT a.id, a.title, a.slug, a.status, a.view_count, a.created_at,
+                  COALESCE(l.likes, 0) as likes,
+                  COALESCE(c.comments, 0) as comments,
+                  COALESCE(b.bookmarks, 0) as bookmarks
+           FROM articles a
+           LEFT JOIN (SELECT article_id, COUNT(*) as likes FROM article_likes GROUP BY article_id) l ON a.id = l.article_id
+           LEFT JOIN (SELECT article_id, COUNT(*) as comments FROM comments WHERE is_deleted = 0 GROUP BY article_id) c ON a.id = c.article_id
+           LEFT JOIN (SELECT article_id, COUNT(*) as bookmarks FROM bookmarks GROUP BY article_id) b ON a.id = b.article_id
+           ORDER BY a.view_count DESC`
+        );
+
+        return res.status(200).json({ success: true, data: rows });
+      } catch (error) {
+        console.error('获取文章统计失败:', error);
+        return res.status(500).json({ success: false, message: '获取文章统计失败' });
+      }
+    }
+
     if (pathname === '/api/admin/stats' && req.method === 'GET') {
       const { requireAdmin } = require('./middleware/auth');
       const admin = await requireAdmin(req, res);
@@ -279,7 +306,7 @@ module.exports = async (req, res) => {
       try {
         const [[{ total: totalUsers }]] = await pool.execute('SELECT COUNT(*) as total FROM users');
         const [[{ total: totalComments }]] = await pool.execute('SELECT COUNT(*) as total FROM comments WHERE is_deleted = 0');
-        const [[{ total: totalArticles }]] = await pool.execute('SELECT COUNT(*) as total FROM articles WHERE status = ?', ['published']);
+        const [[{ total: totalArticles }]] = await pool.execute('SELECT COUNT(*) as total FROM articles');
         const [[{ total: totalViews }]] = await pool.execute('SELECT COALESCE(SUM(view_count), 0) as total FROM articles');
 
         return res.status(200).json({
@@ -330,10 +357,10 @@ module.exports = async (req, res) => {
           const [rows] = await pool.execute(
             `SELECT c.id, c.article_id, c.parent_id, c.content, c.is_sticky, c.is_deleted,
                     c.created_at, c.updated_at,
-                    u.id as user_id, u.username, u.role as user_role,
+                    COALESCE(u.id, 0) as user_id, COALESCE(u.username, '(未知用户)') as username, COALESCE(u.role, 'user') as user_role,
                     COALESCE(a.title, '(已删除)') as article_title, a.slug as article_slug
              FROM comments c
-             JOIN users u ON c.user_id = u.id
+             LEFT JOIN users u ON c.user_id = u.id
              LEFT JOIN articles a ON c.article_id = a.id
              WHERE c.is_deleted = 0
              ORDER BY c.created_at DESC

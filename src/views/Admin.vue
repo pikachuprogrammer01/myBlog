@@ -15,6 +15,8 @@
         <AdminChart v-if="articles.length > 0" :options="categoryOptions" />
       </div>
 
+      <ArticleStatsTable :articles="articleStats" />
+
       <CommentManager
         :comments="comments"
         @delete="deleteComment"
@@ -56,6 +58,7 @@
   import AdminChart from "@/components/admin/AdminChart.vue";
   import AdminStats from "@/components/admin/AdminStats.vue";
   import CommentManager from "@/components/admin/CommentManager.vue";
+  import ArticleStatsTable from "@/components/admin/ArticleStatsTable.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
   const router = useRouter();
@@ -69,6 +72,7 @@
 
   const comments = ref([]);
   const articles = ref([]);
+  const articleStats = ref([]);
 
   const categoryOptions = computed(() => {
     if (articles.value.length === 0) return {};
@@ -120,9 +124,10 @@
     const localArticles = getArticles();
     articles.value = localArticles;
 
-    // Step 2: Show cached stats & comments from previous admin visit
+    // Step 2: Show cached data from previous admin visit
     const cachedStats = getCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
     const cachedComments = getCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
+    const cachedArticleStats = getCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
 
     if (cachedStats) {
       stats.value = cachedStats;
@@ -142,12 +147,17 @@
       comments.value = cachedComments;
     }
 
+    if (cachedArticleStats) {
+      articleStats.value = cachedArticleStats;
+    }
+
     // Step 3: Refresh from API in background
     try {
-      const [articlesRes, statsRes, commentsRes] = await Promise.all([
+      const [articlesRes, statsRes, commentsRes, articleStatsRes] = await Promise.all([
         adminClient.get("/api/articles", { params: { limit: 100 } }),
         adminClient.get("/api/admin/stats"),
         adminClient.get("/api/admin/comments", { params: { limit: 100 } }),
+        adminClient.get("/api/admin/articles-stats"),
       ]);
 
       if (articlesRes.data.success) {
@@ -171,6 +181,11 @@
           articleSlug: c.article_slug,
         }));
         setCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS, comments.value);
+      }
+
+      if (articleStatsRes.data.success) {
+        articleStats.value = articleStatsRes.data.data;
+        setCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS, articleStats.value);
       }
     } catch (error) {
       console.error(

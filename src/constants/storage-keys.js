@@ -13,4 +13,5 @@ export const STORAGE_KEYS = {
   CACHED_CATEGORIES: 'blog_cached_categories',
   CACHED_ADMIN_STATS: 'blog_cached_admin_stats',
   CACHED_ADMIN_COMMENTS: 'blog_cached_admin_comments',
+  CACHED_ADMIN_ARTICLE_STATS: 'blog_cached_admin_article_stats',
 };
