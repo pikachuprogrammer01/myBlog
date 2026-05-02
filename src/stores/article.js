@@ -10,6 +10,7 @@ export const useArticleStore = defineStore('article', () => {
   const categories = ref([]);
   const loading = ref(false);
   const lastFetched = ref(0);
+  const lastCategoriesFetched = ref(0);
   const fetchPromise = ref(null);
   const CACHE_TTL = 5 * 60 * 1000;
 
@@ -75,7 +76,7 @@ export const useArticleStore = defineStore('article', () => {
 
   // Load categories with cache-first pattern
   async function loadCategories(force = false) {
-    if (!force && categories.value.length > 0 && Date.now() - lastFetched.value < CACHE_TTL) {
+    if (!force && categories.value.length > 0 && Date.now() - lastCategoriesFetched.value < CACHE_TTL) {
       return;
     }
 
@@ -94,7 +95,7 @@ export const useArticleStore = defineStore('article', () => {
           slug: c.slug,
         }));
         setCache(STORAGE_KEYS.CACHED_CATEGORIES, categories.value);
-        lastFetched.value = Date.now();
+        lastCategoriesFetched.value = Date.now();
       }
     } catch {
       // Keep cached data

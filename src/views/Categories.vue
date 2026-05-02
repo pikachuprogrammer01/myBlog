@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
@@ -147,7 +147,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const { getCategories, getArticlesByCategory } = useArticles()
+const { loadCategories, getCategories, getArticlesByCategory } = useArticles()
 
 const selectedCategory = computed(() => {
   return typeof route.query.category === 'string' ? route.query.category : ''
@@ -208,6 +208,10 @@ const selectTag = (tag) => {
 const clearSelectedCategory = () => {
   router.push('/categories')
 }
+
+onMounted(() => {
+  loadCategories(true)
+})
 </script>
 
 <style scoped lang="scss">
