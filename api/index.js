@@ -19,6 +19,7 @@ const {
 const { submitContact, getContactMessages, markRead, getRemaining, testEmailConfig } = require('./routes/contact');
 const { getTags, createTag, updateTag, deleteTag, getPublicTags } = require('./routes/tags');
 const { listArticles, getArticle, createArticle, updateArticle, deleteArticle, uploadArticleMd } = require('./routes/articles');
+const { getTools, createTool, updateTool, deleteTool, getPublicTools } = require('./routes/tools');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -412,6 +413,27 @@ module.exports = async (req, res) => {
     if (pathname.match(/^\/api\/admin\/tags\/\d+$/) && req.method === 'DELETE') {
       const tagId = parseInt(pathname.split('/').pop());
       return await deleteTag(req, res, tagId);
+    }
+
+    // ============ Public Tools ============
+    if (pathname === '/api/tools' && req.method === 'GET') {
+      return await getPublicTools(req, res);
+    }
+
+    // ============ Admin: Tools Management ============
+    if (pathname === '/api/admin/tools' && req.method === 'GET') {
+      return await getTools(req, res);
+    }
+    if (pathname === '/api/admin/tools' && req.method === 'POST') {
+      return await createTool(req, res);
+    }
+    if (pathname.match(/^\/api\/admin\/tools\/\d+$/) && req.method === 'PUT') {
+      const toolId = parseInt(pathname.split('/').pop());
+      return await updateTool(req, res, toolId);
+    }
+    if (pathname.match(/^\/api\/admin\/tools\/\d+$/) && req.method === 'DELETE') {
+      const toolId = parseInt(pathname.split('/').pop());
+      return await deleteTool(req, res, toolId);
     }
 
     // ============ Admin: Article Management ============

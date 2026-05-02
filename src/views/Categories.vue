@@ -13,7 +13,7 @@
         </h3>
         <div class="category-list">
           <el-tag
-            v-for="category in categories"
+            v-for="category in categories.filter(c => c.count > 0)"
             :key="category.id"
             :type="getCategoryType(category.count)"
             size="large"
@@ -101,12 +101,17 @@
 
       <!-- 所有分类统计 -->
       <div class="all-categories-section">
-        <h3>
-          <el-icon><DataAnalysis /></el-icon>
-          所有分类统计
-        </h3>
+        <div class="stats-header">
+          <h3>
+            <el-icon><DataAnalysis /></el-icon>
+            所有分类统计
+          </h3>
+          <el-button link type="primary" @click="showZeroCount = !showZeroCount">
+            {{ showZeroCount ? '隐藏空分类' : '显示空分类' }}
+          </el-button>
+        </div>
         <div class="categories-stats">
-          <div v-for="category in categories" :key="category.id" class="category-stat-item">
+          <div v-for="category in visibleStats" :key="category.id" class="category-stat-item">
             <div class="category-name">
               <el-icon><Folder /></el-icon>
               {{ category.name }}
@@ -127,7 +132,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
@@ -149,6 +154,12 @@ const selectedCategory = computed(() => {
 })
 
 const categories = computed(() => getCategories())
+
+const showZeroCount = ref(false)
+const visibleStats = computed(() => {
+  if (showZeroCount.value) return categories.value
+  return categories.value.filter(c => c.count > 0)
+})
 
 // 根据选中的分类筛选文章
 const filteredArticles = computed(() => {
@@ -351,8 +362,15 @@ const clearSelectedCategory = () => {
   }
 
   .all-categories-section {
-    h3 {
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: var(--blog-spacing-lg);
+    }
+
+    h3 {
+      margin: 0;
       font-size: 18px;
       font-weight: 600;
       display: flex;

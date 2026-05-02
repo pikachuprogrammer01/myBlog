@@ -50,14 +50,16 @@
 
         <div class="auth-zone">
           <template v-if="isAuthenticated">
-            <el-button
-              v-if="isAdmin"
-              type="primary"
-              circle
-              :icon="CirclePlus"
-              @click="router.push('/admin')"
-              class="write-btn"
-            />
+            <el-tooltip content="管理后台" placement="bottom" effect="dark">
+              <el-button
+                v-if="isAdmin"
+                type="primary"
+                circle
+                :icon="Monitor"
+                @click="router.push('/admin')"
+                class="write-btn"
+              />
+            </el-tooltip>
 
             <el-dropdown @command="handleUserCommand" trigger="click">
               <div class="user-info-trigger">
@@ -115,7 +117,7 @@
     Search,
     ArrowDown,
     SwitchButton,
-    CirclePlus,
+    Monitor,
     Reading,
     CollectionTag,
   } from "@element-plus/icons-vue";

@@ -24,8 +24,8 @@
     <div class="sidebar-widget">
       <h3 class="widget-title">热门标签</h3>
       <div class="tag-flex">
-        <el-tag v-for="t in tags" :key="t" class="modern-tag" effect="light"
-          ># {{ t }}</el-tag
+        <el-tag v-for="t in tags" :key="t.tag || t" class="modern-tag" effect="light"
+          ># {{ t.tag || t }}</el-tag
         >
       </div>
     </div>

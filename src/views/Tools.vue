@@ -44,15 +44,14 @@
 </template>
 
 <script setup>
-  import { ref, computed } from "vue";
+  import { ref, computed, onMounted } from "vue";
   import { Tools, TopRight } from "@element-plus/icons-vue";
+  import { getPublicTools } from "@/api/services/adminService";
 
-  // 分类数据
-  const categories = ["前端工具", "Java/后端", "开发辅助", "学习社区"];
   const currentCategory = ref("全部");
 
-  // 工具数据列表
-  const toolsList = ref([
+  // 静态后备数据
+  const staticTools = [
     {
       name: "Vue.js",
       desc: "渐进式 JavaScript 框架，本项目核心技术。",
@@ -130,7 +129,18 @@
       icon: "https://www.json.cn/favicon.ico",
       category: "开发辅助",
     },
-  ]);
+  ];
+
+  const toolsList = ref([]);
+
+  // 从数据中提取分类
+  const categories = computed(() => {
+    const cats = new Set();
+    toolsList.value.forEach((t) => {
+      if (t.category) cats.add(t.category);
+    });
+    return Array.from(cats);
+  });
 
   // 过滤后的工具列表
   const filteredTools = computed(() => {
@@ -155,6 +165,25 @@
     e.target.src =
       "https://element-plus.org/images/element-plus-logo-small.svg"; // 默认占位图
   };
+
+  onMounted(async () => {
+    try {
+      const res = await getPublicTools();
+      if (res.data.success && res.data.data) {
+        toolsList.value = res.data.data.map((t) => ({
+          name: t.name,
+          desc: t.description,
+          url: t.url,
+          icon: t.icon,
+          category: t.category,
+        }));
+        return;
+      }
+    } catch {
+      // API unavailable, fall back to static data
+    }
+    toolsList.value = staticTools;
+  });
 </script>
 
 <style scoped lang="scss">

@@ -175,6 +175,7 @@ export const useArticleStore = defineStore('article', () => {
   function getArticlesByCategory(categoryId) {
     const target = String(categoryId).toLowerCase();
     return getAllArticles().filter((a) => {
+      if (a.category_slug && String(a.category_slug).toLowerCase() === target) return true;
       const cats = Array.isArray(a.categories) ? a.categories : a.category_name ? [a.category_name] : [];
       return cats.some((c) => {
         const name = typeof c === 'object' ? c.name || c.slug : c;

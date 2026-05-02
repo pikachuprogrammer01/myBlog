@@ -77,3 +77,24 @@ export function uploadArticleMd(file) {
 export function getCategories() {
   return client.get('/api/categories');
 }
+
+// Tools CRUD
+export function getTools() {
+  return client.get('/api/admin/tools');
+}
+
+export function getPublicTools() {
+  return client.get('/api/tools');
+}
+
+export function createTool(data) {
+  return client.post('/api/admin/tools', data);
+}
+
+export function updateTool(id, data) {
+  return client.put(`/api/admin/tools/${id}`, data);
+}
+
+export function deleteTool(id) {
+  return client.delete(`/api/admin/tools/${id}`);
+}

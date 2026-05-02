@@ -36,6 +36,10 @@
         <el-tab-pane label="标签管理" name="tags">
           <TagManager ref="tagManagerRef" />
         </el-tab-pane>
+
+        <el-tab-pane label="工具管理" name="tools">
+          <ToolManager ref="toolManagerRef" />
+        </el-tab-pane>
       </el-tabs>
 
       <DataActions
@@ -66,6 +70,7 @@
   import ArticleStatsTable from "@/components/admin/ArticleStatsTable.vue";
   import TagManager from "@/components/admin/TagManager.vue";
   import ArticleManager from "@/components/admin/ArticleManager.vue";
+import ToolManager from "@/components/admin/ToolManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
   const router = useRouter();
@@ -87,6 +92,7 @@
   const articles = ref([]);
   const articleStats = ref([]);
   const tagManagerRef = ref(null);
+  const toolManagerRef = ref(null);
   const overviewChartRef = ref(null);
 
   const categoryOptions = computed(() => {
@@ -362,6 +368,16 @@
           文章数: t.articleCount || 0,
         }));
         utils.book_append_sheet(wb, utils.json_to_sheet(tagData), "标签管理");
+      } else if (activeTab.value === "tools") {
+        fileName = `blog-tools-${dateStr}.xlsx`;
+        const toolData = (toolManagerRef.value?.tools || []).map((t) => ({
+          工具名称: t.name,
+          分类: t.category,
+          链接: t.url,
+          描述: t.description,
+          排序: t.sort_order,
+        }));
+        utils.book_append_sheet(wb, utils.json_to_sheet(toolData), "工具管理");
       }
 
       writeFile(wb, fileName);
