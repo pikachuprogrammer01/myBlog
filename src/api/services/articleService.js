@@ -35,3 +35,7 @@ export function getBookmarks() {
 export function getStats() {
   return client.get('/api/stats');
 }
+
+export function getTags() {
+  return client.get('/api/tags');
+}

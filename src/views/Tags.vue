@@ -95,9 +95,10 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useArticles } from "@/composables/useArticles";
+import { getTags } from "@/api/services/articleService";
 import { formatDate } from "@/utils/date";
 import {
   PriceTag,
@@ -110,14 +111,36 @@ import {
 const route = useRoute();
 const router = useRouter();
 const { getPopularTags, getArticlesByTag, getArticles } = useArticles();
+
+const apiTags = ref(null);
+async function loadTags() {
+  try {
+    const res = await getTags();
+    if (res.data.success) {
+      apiTags.value = res.data.data;
+    }
+  } catch {
+    // Fallback to article-derived tags
+  }
+}
+
 const selectedTag = computed(() =>
   typeof route.query.tag === "string" ? route.query.tag : "",
 );
 
-const popularTags = computed(() => getPopularTags());
+const popularTags = computed(() => {
+  if (apiTags.value) {
+    return apiTags.value.filter((t) => t.articleCount > 0).slice(0, 10).map((t) => ({ tag: t.name, count: t.articleCount }));
+  }
+  return getPopularTags();
+});
+
 const allArticles = computed(() => getArticles());
 
 const allTags = computed(() => {
+  if (apiTags.value) {
+    return apiTags.value.map((t) => ({ tag: t.name, count: t.articleCount }));
+  }
   const tagCount = {};
   allArticles.value.forEach((article) => {
     article.tags?.forEach((tag) => {
@@ -173,6 +196,10 @@ const selectTag = (tag) => {
 const clearSelectedTag = () => {
   router.push("/tags");
 };
+
+onMounted(() => {
+  loadTags();
+});
 </script>
 
 <style scoped lang="scss">
