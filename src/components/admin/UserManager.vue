@@ -31,10 +31,13 @@
           {{ formatDate(row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" align="center">
+      <el-table-column label="操作" width="220" align="center">
         <template #default="{ row }">
           <el-button size="small" @click="openDialog(row)">
             <el-icon><Edit /></el-icon>
+          </el-button>
+          <el-button size="small" type="warning" :loading="resettingId === row.id" @click="handleResetPassword(row)">
+            <el-icon><Key /></el-icon>
           </el-button>
           <el-button size="small" type="danger" :loading="deletingId === row.id" @click="handleDelete(row)">
             <el-icon><Delete /></el-icon>
@@ -86,8 +89,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Plus, Edit, Delete } from "@element-plus/icons-vue";
-import { getAdminUsers, updateAdminUser, deleteAdminUser } from "@/api/services/adminService";
+import { Plus, Edit, Delete, Key } from "@element-plus/icons-vue";
+import { getAdminUsers, updateAdminUser, deleteAdminUser, resetAdminUserPassword } from "@/api/services/adminService";
 
 const users = ref([]);
 const searchQuery = ref("");
@@ -95,6 +98,7 @@ const roleFilter = ref("");
 const loading = ref(false);
 const saving = ref(false);
 const deletingId = ref(null);
+const resettingId = ref(null);
 const dialogVisible = ref(false);
 const editingId = ref(null);
 const page = ref(1);
@@ -230,6 +234,30 @@ function handleDelete(row) {
         ElMessage.error(error.response?.data?.message || "删除失败");
       } finally {
         deletingId.value = null;
+      }
+    })
+    .catch(() => {});
+}
+
+function handleResetPassword(row) {
+  ElMessageBox.confirm(
+    `确定要将用户「${row.username}」的密码重置为 123456 吗？`,
+    "重置密码确认",
+    { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning", ...confirmBase }
+  )
+    .then(async () => {
+      resettingId.value = row.id;
+      try {
+        const res = await resetAdminUserPassword(row.id);
+        if (res.data.success) {
+          ElMessage.success(`用户「${row.username}」的密码已重置为 123456`);
+        } else {
+          ElMessage.error(res.data.message || "重置失败");
+        }
+      } catch (error) {
+        ElMessage.error(error.response?.data?.message || "重置密码失败");
+      } finally {
+        resettingId.value = null;
       }
     })
     .catch(() => {});

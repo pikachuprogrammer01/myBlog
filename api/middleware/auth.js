@@ -54,4 +54,80 @@ async function requireAdmin(req, res) {
   return user;
 }
 
-module.exports = { signToken, verifyToken, authMiddleware, requireAuth, requireAdmin };
+// Express middleware: requires valid JWT, sets req.user or returns 401
+async function requireAuthMw(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: '请先登录' });
+  }
+
+  const token = header.slice(7);
+  try {
+    const decoded = verifyToken(token);
+    const pool = require('../db');
+    const [rows] = await pool.execute(
+      'SELECT id, username, role, avatar_url, created_at FROM users WHERE id = ?',
+      [decoded.userId]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, message: '用户不存在' });
+    }
+    req.user = rows[0];
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, message: '令牌无效或已过期' });
+  }
+}
+
+// Express middleware: requires admin role
+async function requireAdminMw(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: '请先登录' });
+  }
+
+  const token = header.slice(7);
+  try {
+    const decoded = verifyToken(token);
+    const pool = require('../db');
+    const [rows] = await pool.execute(
+      'SELECT id, username, role, avatar_url, created_at FROM users WHERE id = ?',
+      [decoded.userId]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, message: '用户不存在' });
+    }
+    if (rows[0].role !== 'admin') {
+      return res.status(403).json({ success: false, message: '需要管理员权限' });
+    }
+    req.user = rows[0];
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, message: '令牌无效或已过期' });
+  }
+}
+
+// Express middleware: optionally attaches user to req (never fails)
+async function optionalAuthMw(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+
+  const token = header.slice(7);
+  try {
+    const decoded = verifyToken(token);
+    const pool = require('../db');
+    const [rows] = await pool.execute(
+      'SELECT id, username, role, avatar_url, created_at FROM users WHERE id = ?',
+      [decoded.userId]
+    );
+    req.user = rows.length > 0 ? rows[0] : null;
+  } catch {
+    req.user = null;
+  }
+  return next();
+}
+
+module.exports = { signToken, verifyToken, authMiddleware, requireAuth, requireAdmin, requireAuthMw, requireAdminMw, optionalAuthMw };

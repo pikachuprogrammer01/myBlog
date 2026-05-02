@@ -1,10 +1,13 @@
+const express = require('express');
+const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { signToken, requireAuth } = require('../middleware/auth');
+const { signToken, requireAuthMw } = require('../middleware/auth');
 const pool = require('../db');
 
 const SALT_ROUNDS = 10;
 
-async function register(req, res) {
+// POST /register
+router.post('/register', async (req, res) => {
   const { username, password } = req.body || {};
   const name = (username || '').trim();
 
@@ -46,9 +49,10 @@ async function register(req, res) {
     console.error('注册失败:', error);
     return res.status(500).json({ success: false, message: '注册失败，请稍后重试' });
   }
-}
+});
 
-async function login(req, res) {
+// POST /login
+router.post('/login', async (req, res) => {
   const { username, password } = req.body || {};
   const name = (username || '').trim();
 
@@ -86,11 +90,11 @@ async function login(req, res) {
     console.error('登录失败:', error);
     return res.status(500).json({ success: false, message: '登录失败，请稍后重试' });
   }
-}
+});
 
-async function getProfile(req, res) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
+// GET /profile
+router.get('/profile', requireAuthMw, async (req, res) => {
+  const user = req.user;
 
   try {
     const [commentCount] = await pool.execute(
@@ -121,6 +125,6 @@ async function getProfile(req, res) {
     console.error('获取用户信息失败:', error);
     return res.status(500).json({ success: false, message: '获取用户信息失败' });
   }
-}
+});
 
-module.exports = { register, login, getProfile };
+module.exports = router;

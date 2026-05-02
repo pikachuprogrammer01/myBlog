@@ -115,3 +115,7 @@ export function updateAdminUser(id, data) {
 export function deleteAdminUser(id) {
   return client.delete(`/api/admin/users/${id}`);
 }
+
+export function resetAdminUserPassword(id) {
+  return client.post(`/api/admin/users/${id}/reset-password`);
+}

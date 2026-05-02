@@ -1,4 +1,5 @@
-const { requireAdmin } = require('../middleware/auth');
+const express = require('express');
+const router = express.Router();
 const pool = require('../db');
 
 let tableReady = false;
@@ -19,18 +20,13 @@ async function ensureTable() {
   tableReady = true;
 }
 
-// 从文章 JSON 数组中提取所有标签，自动写入字典表（已存在的跳过）
 async function syncTagsFromArticles() {
   try {
     const [articles] = await pool.execute('SELECT tags FROM articles');
     const allTagNames = new Set();
     articles.forEach((a) => {
       let t;
-      try {
-        t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
-      } catch {
-        t = [];
-      }
+      try { t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags; } catch { t = []; }
       (Array.isArray(t) ? t : []).forEach((name) => {
         if (name && name.trim().length <= 50) {
           allTagNames.add(name.trim());
@@ -43,9 +39,7 @@ async function syncTagsFromArticles() {
       if (!slug) continue;
       try {
         await pool.execute('INSERT IGNORE INTO tags (name, slug) VALUES (?, ?)', [name, slug]);
-      } catch {
-        // 跳过重复或无效的标签
-      }
+      } catch {}
     }
   } catch (error) {
     console.error('[Tags] 同步文章标签到字典表失败:', error.message);
@@ -60,196 +54,29 @@ function slugify(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-// GET /api/admin/tags — 获取所有标签（含文章数）
-async function getTags(req, res) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
-
-  try {
-    await ensureTable();
-    const [tags] = await pool.execute('SELECT id, name, slug, created_at FROM tags ORDER BY name');
-
-    // 从文章 JSON 数组中统计每个标签的使用次数
-    const [articles] = await pool.execute('SELECT tags FROM articles WHERE status = ?', ['published']);
-    const usage = {};
-    articles.forEach((a) => {
-      let t;
-      try {
-        t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
-      } catch {
-        t = [];
-      }
-      (Array.isArray(t) ? t : []).forEach((name) => {
-        usage[name] = (usage[name] || 0) + 1;
-      });
-    });
-
-    const data = tags.map((t) => ({ ...t, articleCount: usage[t.name] || 0 }));
-    return res.status(200).json({ success: true, data });
-  } catch (error) {
-    console.error('[Tags] 获取标签列表失败:', error);
-    return res.status(500).json({ success: false, message: '获取标签失败' });
-  }
-}
-
-// POST /api/admin/tags — 新增标签
-async function createTag(req, res) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
-
-  const { name } = req.body || {};
-  if (!name || name.trim().length < 1 || name.trim().length > 50) {
-    return res.status(400).json({ success: false, message: '标签名称需在 1-50 个字符之间' });
-  }
-
-  const slug = slugify(name.trim());
-  if (!slug) {
-    return res.status(400).json({ success: false, message: '标签名称无效' });
-  }
-
-  try {
-    await ensureTable();
-    const [result] = await pool.execute('INSERT INTO tags (name, slug) VALUES (?, ?)', [name.trim(), slug]);
-    return res.status(201).json({ success: true, data: { id: result.insertId, name: name.trim(), slug } });
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ success: false, message: '标签名称已存在' });
-    }
-    console.error('[Tags] 创建标签失败:', error);
-    return res.status(500).json({ success: false, message: '创建标签失败' });
-  }
-}
-
-// PUT /api/admin/tags/:id — 重命名标签（同步更新文章 JSON 数组）
-async function updateTag(req, res, id) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
-
-  const { name } = req.body || {};
-  if (!name || name.trim().length < 1 || name.trim().length > 50) {
-    return res.status(400).json({ success: false, message: '标签名称需在 1-50 个字符之间' });
-  }
-
-  const newSlug = slugify(name.trim());
-  if (!newSlug) {
-    return res.status(400).json({ success: false, message: '标签名称无效' });
-  }
-
-  try {
-    await ensureTable();
-
-    // 获取旧标签名
-    const [rows] = await pool.execute('SELECT name FROM tags WHERE id = ?', [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: '标签不存在' });
-    }
-    const oldName = rows[0].name;
-
-    // 更新标签表
-    await pool.execute('UPDATE tags SET name = ?, slug = ? WHERE id = ?', [name.trim(), newSlug, id]);
-
-    // 同步更新文章中的 JSON 数组：将旧标签名替换为新标签名
-    if (oldName !== name.trim()) {
-      const [articles] = await pool.execute('SELECT id, tags FROM articles');
-      for (const a of articles) {
-        let t;
-        try {
-          t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
-        } catch {
-          continue;
-        }
-        if (!Array.isArray(t)) continue;
-        const idx = t.findIndex((tag) => tag === oldName);
-        if (idx !== -1) {
-          t[idx] = name.trim();
-          await pool.execute('UPDATE articles SET tags = ? WHERE id = ?', [JSON.stringify(t), a.id]);
-        }
-      }
-    }
-
-    return res.status(200).json({ success: true, data: { id, name: name.trim(), slug: newSlug } });
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ success: false, message: '标签名称已存在' });
-    }
-    console.error('[Tags] 更新标签失败:', error);
-    return res.status(500).json({ success: false, message: '更新标签失败' });
-  }
-}
-
-// DELETE /api/admin/tags/:id — 删除标签（从文章 JSON 数组中移除）
-async function deleteTag(req, res, id) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
-
-  try {
-    await ensureTable();
-
-    const [rows] = await pool.execute('SELECT name FROM tags WHERE id = ?', [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: '标签不存在' });
-    }
-    const tagName = rows[0].name;
-
-    // 删除标签
-    await pool.execute('DELETE FROM tags WHERE id = ?', [id]);
-
-    // 从所有文章中移除该标签
-    const [articles] = await pool.execute('SELECT id, tags FROM articles');
-    for (const a of articles) {
-      let t;
-      try {
-        t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
-      } catch {
-        continue;
-      }
-      if (!Array.isArray(t)) continue;
-      const filtered = t.filter((tag) => tag !== tagName);
-      if (filtered.length !== t.length) {
-        await pool.execute('UPDATE articles SET tags = ? WHERE id = ?', [JSON.stringify(filtered), a.id]);
-      }
-    }
-
-    return res.status(200).json({ success: true, message: '标签已删除' });
-  } catch (error) {
-    console.error('[Tags] 删除标签失败:', error);
-    return res.status(500).json({ success: false, message: '删除标签失败' });
-  }
-}
-
-// GET /api/tags — 公开接口，返回所有标签（含文章数），包含文章中有但未纳入管理的孤儿标签
-async function getPublicTags(req, res) {
+// GET /api/tags — public
+router.get('/', async (req, res) => {
   try {
     await ensureTable();
     const [managedTags] = await pool.execute('SELECT id, name, slug, created_at FROM tags ORDER BY name');
 
-    // 从已发布文章 JSON 数组中统计每个标签的使用次数
     const [articles] = await pool.execute('SELECT tags FROM articles WHERE status = ?', ['published']);
     const usage = {};
     articles.forEach((a) => {
       let t;
-      try {
-        t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
-      } catch {
-        t = [];
-      }
-      (Array.isArray(t) ? t : []).forEach((name) => {
-        usage[name] = (usage[name] || 0) + 1;
-      });
+      try { t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags; } catch { t = []; }
+      (Array.isArray(t) ? t : []).forEach((name) => { usage[name] = (usage[name] || 0) + 1; });
     });
 
-    // 已纳管的标签
     const managedNames = new Set(managedTags.map((t) => t.name));
     const data = managedTags.map((t) => ({ ...t, articleCount: usage[t.name] || 0 }));
 
-    // 文章中出现但未纳管的孤儿标签
     Object.entries(usage).forEach(([name, count]) => {
       if (!managedNames.has(name)) {
         data.push({ id: null, name, slug: '', articleCount: count, created_at: null, orphan: true });
       }
     });
 
-    // 按文章数降序
     data.sort((a, b) => b.articleCount - a.articleCount);
 
     return res.status(200).json({ success: true, data });
@@ -257,6 +84,7 @@ async function getPublicTags(req, res) {
     console.error('[Tags] 获取公开标签列表失败:', error);
     return res.status(500).json({ success: false, message: '获取标签失败' });
   }
-}
+});
 
-module.exports = { getTags, createTag, updateTag, deleteTag, getPublicTags, syncTagsFromArticles };
+module.exports = router;
+module.exports.syncTagsFromArticles = syncTagsFromArticles;

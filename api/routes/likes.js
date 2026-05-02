@@ -1,10 +1,12 @@
-const { requireAuth } = require('../middleware/auth');
+const express = require('express');
+const router = express.Router();
 const pool = require('../db');
+const { requireAuthMw, optionalAuthMw } = require('../middleware/auth');
 
-// POST /api/articles/:slug/like — 切换文章点赞
-async function toggleArticleLike(req, res, articleSlug) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
+// POST /api/articles/:slug/like
+router.post('/articles/:slug/like', requireAuthMw, async (req, res) => {
+  const articleSlug = req.params.slug;
+  const user = req.user;
 
   try {
     const [articles] = await pool.execute(
@@ -22,15 +24,9 @@ async function toggleArticleLike(req, res, articleSlug) {
     );
 
     if (existing.length > 0) {
-      await pool.execute('DELETE FROM article_likes WHERE article_id = ? AND user_id = ?', [
-        articleId,
-        user.id,
-      ]);
+      await pool.execute('DELETE FROM article_likes WHERE article_id = ? AND user_id = ?', [articleId, user.id]);
     } else {
-      await pool.execute('INSERT INTO article_likes (article_id, user_id) VALUES (?, ?)', [
-        articleId,
-        user.id,
-      ]);
+      await pool.execute('INSERT INTO article_likes (article_id, user_id) VALUES (?, ?)', [articleId, user.id]);
     }
 
     const [count] = await pool.execute(
@@ -46,10 +42,13 @@ async function toggleArticleLike(req, res, articleSlug) {
     console.error('点赞操作失败:', error);
     return res.status(500).json({ success: false, message: '操作失败' });
   }
-}
+});
 
-// GET /api/articles/:slug/like — 获取文章点赞状态（含当前用户是否已点赞）
-async function getArticleLike(req, res, articleSlug) {
+// GET /api/articles/:slug/like
+router.get('/articles/:slug/like', optionalAuthMw, async (req, res) => {
+  const articleSlug = req.params.slug;
+  const user = req.user;
+
   try {
     const [articles] = await pool.execute(
       'SELECT id FROM articles WHERE slug = ? AND status = ?',
@@ -66,8 +65,6 @@ async function getArticleLike(req, res, articleSlug) {
     );
 
     let liked = false;
-    const { authMiddleware } = require('../middleware/auth');
-    const user = await authMiddleware(req, res);
     if (user) {
       const [rows] = await pool.execute(
         'SELECT id FROM article_likes WHERE article_id = ? AND user_id = ?',
@@ -81,12 +78,12 @@ async function getArticleLike(req, res, articleSlug) {
     console.error('获取点赞数失败:', error);
     return res.status(500).json({ success: false, message: '获取失败' });
   }
-}
+});
 
-// POST /api/comments/:id/like — 切换评论点赞
-async function toggleCommentLike(req, res, commentId) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
+// POST /api/comments/:id/like
+router.post('/comments/:id/like', requireAuthMw, async (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const user = req.user;
 
   try {
     const [comments] = await pool.execute(
@@ -103,15 +100,9 @@ async function toggleCommentLike(req, res, commentId) {
     );
 
     if (existing.length > 0) {
-      await pool.execute('DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?', [
-        commentId,
-        user.id,
-      ]);
+      await pool.execute('DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?', [commentId, user.id]);
     } else {
-      await pool.execute('INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)', [
-        commentId,
-        user.id,
-      ]);
+      await pool.execute('INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)', [commentId, user.id]);
     }
 
     const [count] = await pool.execute(
@@ -127,12 +118,12 @@ async function toggleCommentLike(req, res, commentId) {
     console.error('点赞操作失败:', error);
     return res.status(500).json({ success: false, message: '操作失败' });
   }
-}
+});
 
-// POST /api/articles/:slug/bookmark — 切换收藏
-async function toggleBookmark(req, res, articleSlug) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
+// POST /api/articles/:slug/bookmark
+router.post('/articles/:slug/bookmark', requireAuthMw, async (req, res) => {
+  const articleSlug = req.params.slug;
+  const user = req.user;
 
   try {
     const [articles] = await pool.execute(
@@ -150,15 +141,9 @@ async function toggleBookmark(req, res, articleSlug) {
     );
 
     if (existing.length > 0) {
-      await pool.execute('DELETE FROM bookmarks WHERE article_id = ? AND user_id = ?', [
-        articleId,
-        user.id,
-      ]);
+      await pool.execute('DELETE FROM bookmarks WHERE article_id = ? AND user_id = ?', [articleId, user.id]);
     } else {
-      await pool.execute('INSERT INTO bookmarks (article_id, user_id) VALUES (?, ?)', [
-        articleId,
-        user.id,
-      ]);
+      await pool.execute('INSERT INTO bookmarks (article_id, user_id) VALUES (?, ?)', [articleId, user.id]);
     }
 
     return res.status(200).json({
@@ -169,12 +154,11 @@ async function toggleBookmark(req, res, articleSlug) {
     console.error('收藏操作失败:', error);
     return res.status(500).json({ success: false, message: '操作失败' });
   }
-}
+});
 
-// GET /api/user/bookmarks — 获取用户收藏列表
-async function getUserBookmarks(req, res) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
+// GET /api/user/bookmarks
+router.get('/user/bookmarks', requireAuthMw, async (req, res) => {
+  const user = req.user;
 
   try {
     const [rows] = await pool.execute(
@@ -192,10 +176,13 @@ async function getUserBookmarks(req, res) {
     console.error('获取收藏列表失败:', error);
     return res.status(500).json({ success: false, message: '获取收藏列表失败' });
   }
-}
+});
 
-// GET /api/articles/:slug/bookmark — 获取文章收藏状态（含当前用户是否已收藏）
-async function getBookmarkStatus(req, res, articleSlug) {
+// GET /api/articles/:slug/bookmark
+router.get('/articles/:slug/bookmark', optionalAuthMw, async (req, res) => {
+  const articleSlug = req.params.slug;
+  const user = req.user;
+
   try {
     const [articles] = await pool.execute(
       'SELECT id FROM articles WHERE slug = ? AND status = ?',
@@ -212,8 +199,6 @@ async function getBookmarkStatus(req, res, articleSlug) {
     );
 
     let bookmarked = false;
-    const { authMiddleware } = require('../middleware/auth');
-    const user = await authMiddleware(req, res);
     if (user) {
       const [rows] = await pool.execute(
         'SELECT id FROM bookmarks WHERE article_id = ? AND user_id = ?',
@@ -227,13 +212,6 @@ async function getBookmarkStatus(req, res, articleSlug) {
     console.error('获取收藏数失败:', error);
     return res.status(500).json({ success: false, message: '获取失败' });
   }
-}
+});
 
-module.exports = {
-  toggleArticleLike,
-  getArticleLike,
-  toggleCommentLike,
-  toggleBookmark,
-  getUserBookmarks,
-  getBookmarkStatus,
-};
+module.exports = router;

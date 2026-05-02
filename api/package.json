@@ -4,8 +4,12 @@
   "description": "",
   "dependencies": {
     "ali-oss": "^6.23.0",
+    "bcryptjs": "*",
+    "cors": "^2.8.5",
     "dotenv": "^17.4.2",
+    "express": "^4.21.0",
     "gray-matter": "^4.0.3",
+    "jsonwebtoken": "*",
     "mysql2": "^3.22.3",
     "nodemailer": "^8.0.7"
   },

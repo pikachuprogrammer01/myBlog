@@ -1,8 +1,12 @@
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const express = require('express');
+const router = express.Router();
 const pool = require('../db');
+const { requireAuthMw, requireAdminMw } = require('../middleware/auth');
 
-// GET /api/articles/:slug/comments — 获取文章评论
-async function getComments(req, res, articleSlug) {
+// GET /api/articles/:slug/comments
+router.get('/articles/:slug/comments', async (req, res) => {
+  const articleSlug = req.params.slug;
+
   try {
     const [articles] = await pool.execute('SELECT id FROM articles WHERE slug = ? AND status = ?', [
       articleSlug,
@@ -30,14 +34,14 @@ async function getComments(req, res, articleSlug) {
     console.error('获取评论失败:', error);
     return res.status(500).json({ success: false, message: '获取评论失败' });
   }
-}
+});
 
-// POST /api/articles/:slug/comments — 添加评论
-async function addComment(req, res, articleSlug) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
-
+// POST /api/articles/:slug/comments
+router.post('/articles/:slug/comments', requireAuthMw, async (req, res) => {
+  const articleSlug = req.params.slug;
+  const user = req.user;
   const { content, parentId } = req.body || {};
+
   if (!content || !content.trim()) {
     return res.status(400).json({ success: false, message: '评论内容不能为空' });
   }
@@ -83,14 +87,14 @@ async function addComment(req, res, articleSlug) {
     console.error('添加评论失败:', error);
     return res.status(500).json({ success: false, message: '评论发表失败' });
   }
-}
+});
 
-// PUT /api/comments/:id — 更新评论
-async function updateComment(req, res, commentId) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
-
+// PUT /api/comments/:id
+router.put('/comments/:id', requireAuthMw, async (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const user = req.user;
   const { content } = req.body || {};
+
   if (!content || !content.trim()) {
     return res.status(400).json({ success: false, message: '评论内容不能为空' });
   }
@@ -112,12 +116,12 @@ async function updateComment(req, res, commentId) {
     console.error('更新评论失败:', error);
     return res.status(500).json({ success: false, message: '更新评论失败' });
   }
-}
+});
 
-// DELETE /api/comments/:id — 软删除评论
-async function deleteComment(req, res, commentId) {
-  const user = await requireAuth(req, res);
-  if (!user) return;
+// DELETE /api/comments/:id
+router.delete('/comments/:id', requireAuthMw, async (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const user = req.user;
 
   try {
     const [comments] = await pool.execute('SELECT user_id FROM comments WHERE id = ?', [commentId]);
@@ -136,12 +140,11 @@ async function deleteComment(req, res, commentId) {
     console.error('删除评论失败:', error);
     return res.status(500).json({ success: false, message: '删除评论失败' });
   }
-}
+});
 
-// DELETE /api/comments/:id/permanent — 永久删除（管理员）
-async function permanentDeleteComment(req, res, commentId) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
+// DELETE /api/comments/:id/permanent
+router.delete('/comments/:id/permanent', requireAdminMw, async (req, res) => {
+  const commentId = parseInt(req.params.id);
 
   try {
     await pool.execute('DELETE FROM comments WHERE id = ?', [commentId]);
@@ -150,12 +153,11 @@ async function permanentDeleteComment(req, res, commentId) {
     console.error('永久删除评论失败:', error);
     return res.status(500).json({ success: false, message: '删除评论失败' });
   }
-}
+});
 
-// PUT /api/comments/:id/sticky — 切换置顶
-async function toggleSticky(req, res, commentId) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
+// PUT /api/comments/:id/sticky
+router.put('/comments/:id/sticky', requireAdminMw, async (req, res) => {
+  const commentId = parseInt(req.params.id);
 
   try {
     const [comments] = await pool.execute(
@@ -174,13 +176,6 @@ async function toggleSticky(req, res, commentId) {
     console.error('置顶操作失败:', error);
     return res.status(500).json({ success: false, message: '操作失败' });
   }
-}
+});
 
-module.exports = {
-  getComments,
-  addComment,
-  updateComment,
-  deleteComment,
-  permanentDeleteComment,
-  toggleSticky,
-};
+module.exports = router;

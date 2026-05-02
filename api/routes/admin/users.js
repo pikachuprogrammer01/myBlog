@@ -1,19 +1,20 @@
-const { requireAdmin } = require('../middleware/auth');
-const pool = require('../db');
+const express = require('express');
+const router = express.Router();
+const pool = require('../../db');
+const bcrypt = require('bcryptjs');
+const { requireAdminMw } = require('../../middleware/auth');
 
-// GET /api/admin/users — list users with search, role filter, pagination
-async function listUsers(req, res) {
-  const user = await requireAdmin(req, res);
-  if (!user) return;
+router.use(requireAdminMw);
 
+// GET / — list users with search, role filter, pagination
+router.get('/', async (req, res) => {
   try {
-    const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
-    const page = Math.max(1, parseInt(searchParams.get('page')) || 1);
-    const rawLimit = parseInt(searchParams.get('limit')) || 20;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const rawLimit = parseInt(req.query.limit) || 20;
     const limit = Math.min(100, Math.max(1, rawLimit));
     const offset = Math.max(0, (page - 1) * limit);
-    const search = (searchParams.get('search') || '').trim();
-    const role = (searchParams.get('role') || '').trim();
+    const search = (req.query.search || '').trim();
+    const role = (req.query.role || '').trim();
 
     let where = 'WHERE 1=1';
     const params = [];
@@ -39,23 +40,17 @@ async function listUsers(req, res) {
     return res.status(200).json({
       success: true,
       data: rows,
-      pagination: {
-        page,
-        limit,
-        total: Number(total),
-        totalPages: Math.ceil(Number(total) / limit),
-      },
+      pagination: { page, limit, total: Number(total), totalPages: Math.ceil(Number(total) / limit) },
     });
   } catch (error) {
     console.error('[Users] 获取用户列表失败:', error);
     return res.status(500).json({ success: false, message: '获取用户列表失败' });
   }
-}
+});
 
-// GET /api/admin/users/:id
-async function getUser(req, res, id) {
-  const admin = await requireAdmin(req, res);
-  if (!admin) return;
+// GET /:id
+router.get('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
 
   try {
     const [rows] = await pool.execute(
@@ -70,13 +65,11 @@ async function getUser(req, res, id) {
     console.error('[Users] 获取用户失败:', error);
     return res.status(500).json({ success: false, message: '获取用户失败' });
   }
-}
+});
 
-// PUT /api/admin/users/:id — update username, role, avatar_url
-async function updateUser(req, res, id) {
-  const admin = await requireAdmin(req, res);
-  if (!admin) return;
-
+// PUT /:id
+router.put('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
   const { username, role } = req.body || {};
 
   if (username !== undefined) {
@@ -101,17 +94,10 @@ async function updateUser(req, res, id) {
 
     const targetUser = rows[0];
 
-    // Prevent removing last admin's admin role
     if (role !== undefined && targetUser.role === 'admin' && role !== 'admin') {
-      const [[{ total }]] = await pool.execute(
-        'SELECT COUNT(*) as total FROM users WHERE role = ?',
-        ['admin']
-      );
+      const [[{ total }]] = await pool.execute('SELECT COUNT(*) as total FROM users WHERE role = ?', ['admin']);
       if (Number(total) <= 1) {
-        return res.status(400).json({
-          success: false,
-          message: '不能移除最后一位管理员的权限',
-        });
+        return res.status(400).json({ success: false, message: '不能移除最后一位管理员的权限' });
       }
     }
 
@@ -139,14 +125,13 @@ async function updateUser(req, res, id) {
     console.error('[Users] 更新用户失败:', error);
     return res.status(500).json({ success: false, message: '更新用户失败' });
   }
-}
+});
 
-// DELETE /api/admin/users/:id
-async function deleteUser(req, res, id) {
-  const admin = await requireAdmin(req, res);
-  if (!admin) return;
+// DELETE /:id
+router.delete('/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const admin = req.user;
 
-  // Cannot delete self
   if (Number(id) === admin.id) {
     return res.status(400).json({ success: false, message: '不能删除自己的账号' });
   }
@@ -157,21 +142,13 @@ async function deleteUser(req, res, id) {
       return res.status(404).json({ success: false, message: '用户不存在' });
     }
 
-    // Prevent deleting last admin
     if (rows[0].role === 'admin') {
-      const [[{ total }]] = await pool.execute(
-        'SELECT COUNT(*) as total FROM users WHERE role = ?',
-        ['admin']
-      );
+      const [[{ total }]] = await pool.execute('SELECT COUNT(*) as total FROM users WHERE role = ?', ['admin']);
       if (Number(total) <= 1) {
-        return res.status(400).json({
-          success: false,
-          message: '不能删除最后一位管理员',
-        });
+        return res.status(400).json({ success: false, message: '不能删除最后一位管理员' });
       }
     }
 
-    // Cascade: reassign comments to a placeholder, then delete
     await pool.execute('UPDATE comments SET user_id = 0 WHERE user_id = ?', [id]);
     await pool.execute('DELETE FROM article_likes WHERE user_id = ?', [id]);
     await pool.execute('DELETE FROM comment_likes WHERE user_id = ?', [id]);
@@ -183,6 +160,26 @@ async function deleteUser(req, res, id) {
     console.error('[Users] 删除用户失败:', error);
     return res.status(500).json({ success: false, message: '删除用户失败' });
   }
-}
+});
 
-module.exports = { listUsers, getUser, updateUser, deleteUser };
+// POST /:id/reset-password
+router.post('/:id/reset-password', async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const [rows] = await pool.execute('SELECT id FROM users WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: '用户不存在' });
+    }
+
+    const passwordHash = await bcrypt.hash('123456', 10);
+    await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, id]);
+
+    return res.status(200).json({ success: true, message: '密码已重置为 123456' });
+  } catch (error) {
+    console.error('[Users] 重置密码失败:', error);
+    return res.status(500).json({ success: false, message: '重置密码失败' });
+  }
+});
+
+module.exports = router;
