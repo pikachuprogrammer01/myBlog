@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
-import client from '@/api/client';
+import { login as loginApi, register as registerApi, getProfile } from '@/api/services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
   const savedUser = (() => {
@@ -24,9 +24,6 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = authUser;
     localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, authToken);
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authUser));
-    if (client.defaults.headers) {
-      client.defaults.headers.Authorization = `Bearer ${authToken}`;
-    }
   }
 
   function clearSession() {
@@ -40,7 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username, password) {
     loading.value = true;
     try {
-      const res = await client.post('/api/auth/login', { username, password });
+      const res = await loginApi(username, password);
       if (res.data.success) {
         persistSession(res.data.data.user, res.data.data.token);
         return { success: true, user: res.data.data.user };
@@ -58,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(username, password) {
     loading.value = true;
     try {
-      const res = await client.post('/api/auth/register', { username, password });
+      const res = await registerApi(username, password);
       if (res.data.success) {
         persistSession(res.data.data.user, res.data.data.token);
         return { success: true, user: res.data.data.user };
@@ -77,7 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return false;
     loading.value = true;
     try {
-      const res = await client.get('/api/auth/profile');
+      const res = await getProfile();
       if (res.data.success) {
         user.value = res.data.data;
         localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(res.data.data));

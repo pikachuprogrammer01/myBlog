@@ -18,17 +18,21 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally
+// Handle 401 globally — clear session, let router guard redirect
 client.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-      // Only redirect if not already on auth pages
+      // Use SPA navigation instead of hard reload to avoid flash
       const path = window.location.pathname;
       if (!path.includes('/login') && !path.includes('/register')) {
-        window.location.href = '/login';
+        import('@/router').then(({ default: router }) => {
+          router.push('/login').catch(() => {
+            window.location.href = '/login';
+          });
+        });
       }
     }
     return Promise.reject(error);

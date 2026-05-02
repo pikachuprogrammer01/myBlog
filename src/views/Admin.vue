@@ -45,7 +45,7 @@
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
 
-  import adminClient from "@/api/client";
+  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi } from "@/api/services/adminService";
   import { getCache, setCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
@@ -156,10 +156,10 @@
     // Step 3: Refresh from API in background
     try {
       const [articlesRes, statsRes, commentsRes, articleStatsRes] = await Promise.all([
-        adminClient.get("/api/articles", { params: { limit: 100 } }),
-        adminClient.get("/api/admin/stats"),
-        adminClient.get("/api/admin/comments", { params: { limit: 100 } }),
-        adminClient.get("/api/admin/articles-stats"),
+        getAdminArticles(),
+        getAdminStats(),
+        getAdminComments({ limit: 100 }),
+        getAdminArticleStats(),
       ]);
 
       if (articlesRes.data.success) {
@@ -335,7 +335,7 @@
     })
       .then(async () => {
         try {
-          const res = await adminClient.delete("/api/admin/comments");
+          const res = await clearAllCommentsApi();
           if (res.data.success) {
             ElMessage.success(
               `已清空 ${res.data.data?.deletedCount || 0} 条评论`,
@@ -367,7 +367,7 @@
     )
       .then(async () => {
         try {
-          const res = await adminClient.post("/api/admin/reset");
+          const res = await resetAllDataApi();
           if (res.data.success) {
             ElMessage.success("系统数据已重置");
           } else {

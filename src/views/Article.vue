@@ -231,10 +231,11 @@ import {
   Printer,
   CollectionTag,
 } from '@element-plus/icons-vue'
-import client from '@/api/client'
+import { getArticleBySlug } from '@/api/services/articleService'
 import { useArticleStore } from '@/stores/article'
 import { useAuth } from '@/composables/useAuth'
 import { useArticles } from '@/composables/useArticles'
+import { useNavigationLoading } from '@/composables/useNavigationLoading'
 import MarkdownRenderer from '@/components/blog/MarkdownRenderer.vue'
 import CommentList from '@/components/blog/CommentList.vue'
 import CommentForm from '@/components/blog/CommentForm.vue'
@@ -245,6 +246,7 @@ const router = useRouter()
 const articleStore = useArticleStore()
 const { currentUser } = useAuth()
 const { toggleLike, toggleBookmark, getLikeStatus, getBookmarkStatus } = useArticles()
+const { endNavigation } = useNavigationLoading()
 
 // 路由参数
 const articleId = computed(() => route.params.id)
@@ -274,7 +276,7 @@ const loadArticle = async () => {
   loading.value = true
   try {
     // 从 API 获取完整文章数据（列表接口不含 content 字段，必须调用单篇文章接口）
-    const res = await client.get(`/api/articles/${articleId.value}`)
+    const res = await getArticleBySlug(articleId.value)
     if (res.data.success) {
       const data = res.data.data
       article.value = {
@@ -311,6 +313,7 @@ const loadArticle = async () => {
     ElMessage.error('加载文章失败')
   } finally {
     loading.value = false
+    endNavigation()
   }
 }
 

@@ -90,7 +90,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuth } from '@/composables/useAuth'
 import { useArticles } from '@/composables/useArticles'
 import { formatDate } from '@/utils/date'
-import client from '@/api/client'
+import { getProfile } from '@/api/services/authService'
 import { User, ChatDotRound, Calendar } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -115,7 +115,7 @@ const registrationDays = computed(() => {
 
 async function loadProfile() {
   try {
-    const res = await client.get('/api/auth/profile')
+    const res = await getProfile()
     if (res.data.success) {
       const data = res.data.data
       myComments.value = (data.comments || []).map(c => ({

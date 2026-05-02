@@ -28,6 +28,10 @@
           label-position="top"
           size="large"
         >
+          <el-form-item label="您的邮箱" prop="email">
+            <el-input v-model="form.email" placeholder="请输入您的邮箱地址" maxlength="100" />
+          </el-form-item>
+
           <el-form-item label="主题" prop="subject">
             <el-input v-model="form.subject" placeholder="想聊点什么？" maxlength="40" show-word-limit />
           </el-form-item>
@@ -59,6 +63,7 @@
       <div class="blog-card info-card">
         <h2>说明</h2>
         <ul class="info-list">
+          <li>请填写您的真实邮箱，以便站长回复您。</li>
           <li>留言通过站长 QQ 邮箱发送，请认真填写。</li>
           <li>每人每天最多发送 <strong>10 条</strong>留言。</li>
           <li>主题长度 4-40 字符，内容长度 10-500 字符。</li>
@@ -72,7 +77,7 @@
 import { computed, reactive, ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import { Message } from "@element-plus/icons-vue";
-import client from "@/api/client";
+import { submitContact, getRemaining } from "@/api/services/contactService";
 import { useAuth } from "@/composables/useAuth";
 
 const { isAuthenticated } = useAuth();
@@ -82,11 +87,20 @@ const submitting = ref(false);
 const remainingToday = ref(null);
 
 const form = reactive({
+  email: "",
   subject: "",
   message: "",
 });
 
 const rules = {
+  email: [
+    { required: true, message: "请输入您的邮箱地址", trigger: "blur" },
+    {
+      type: "email",
+      message: "请输入有效的邮箱地址",
+      trigger: "blur",
+    },
+  ],
   subject: [
     { required: true, message: "请输入主题", trigger: "blur" },
     {
@@ -109,7 +123,7 @@ const rules = {
 
 async function loadRemaining() {
   try {
-    const res = await client.get("/api/contact/remaining");
+    const res = await getRemaining();
     if (res.data.success) {
       remainingToday.value = res.data.data.remaining;
     }
@@ -123,9 +137,10 @@ async function handleSubmit() {
     await formRef.value?.validate();
     submitting.value = true;
 
-    const res = await client.post("/api/contact", {
+    const res = await submitContact({
       subject: form.subject,
       message: form.message,
+      email: form.email,
     });
 
     ElMessage.success(res.data?.message || "留言已发送");
@@ -151,6 +166,7 @@ async function handleSubmit() {
 }
 
 const resetForm = () => {
+  form.email = "";
   form.subject = "";
   form.message = "";
   formRef.value?.clearValidate();

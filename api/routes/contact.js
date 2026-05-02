@@ -20,8 +20,11 @@ async function submitContact(req, res) {
   const user = await requireAuth(req, res);
   if (!user) return;
 
-  const { subject, message } = req.body || {};
+  const { subject, message, email } = req.body || {};
 
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: '请提供有效的邮箱地址' });
+  }
   if (!subject || subject.trim().length < 4) {
     return res.status(400).json({ success: false, message: '主题至少需要 4 个字符' });
   }
@@ -30,10 +33,10 @@ async function submitContact(req, res) {
   }
 
   try {
-    // 节流：每人每天最多 DAILY_LIMIT 条
+    // 节流：按用户身份限流，每人每天最多 DAILY_LIMIT 条
     const [[{ cnt }]] = await pool.execute(
-      'SELECT COUNT(*) as cnt FROM contact_messages WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 DAY)',
-      [user.email || user.username]
+      'SELECT COUNT(*) as cnt FROM contact_messages WHERE name = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 DAY)',
+      [user.username]
     );
     if (cnt >= DAILY_LIMIT) {
       return res.status(429).json({ success: false, message: `每人每天最多发送 ${DAILY_LIMIT} 条留言，请明天再试` });
@@ -41,7 +44,7 @@ async function submitContact(req, res) {
 
     await pool.execute(
       'INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)',
-      [user.username, user.email || user.username, subject.trim(), message.trim()]
+      [user.username, email || user.email || user.username, subject.trim(), message.trim()]
     );
 
     // 异步发送邮件通知（不阻塞响应）
@@ -54,7 +57,7 @@ async function submitContact(req, res) {
         html: `
           <h3>来自博客的新留言</h3>
           <p><strong>用户：</strong>${user.username}</p>
-          <p><strong>邮箱：</strong>${user.email || '未知'}</p>
+          <p><strong>邮箱：</strong>${email || user.email || '未知'}</p>
           <p><strong>主题：</strong>${subject.trim()}</p>
           <p><strong>内容：</strong></p>
           <blockquote>${message.trim().replace(/\n/g, '<br>')}</blockquote>
@@ -109,8 +112,8 @@ async function getRemaining(req, res) {
 
   try {
     const [[{ cnt }]] = await pool.execute(
-      'SELECT COUNT(*) as cnt FROM contact_messages WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 DAY)',
-      [user.email || user.username]
+      'SELECT COUNT(*) as cnt FROM contact_messages WHERE name = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 DAY)',
+      [user.username]
     );
     return res.status(200).json({
       success: true,

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import client from '@/api/client';
+import { getComments, addComment as addCommentApi, updateComment as updateCommentApi, deleteComment as deleteCommentApi, batchDeleteComments as batchDeleteApi, permanentDeleteComment as permanentDeleteApi, toggleSticky, likeComment as likeCommentApi } from '@/api/services/commentService';
+import { getStats } from '@/api/services/articleService';
 
 // Normalize API snake_case to component camelCase
 function normalizeComment(c) {
@@ -33,7 +34,7 @@ export const useCommentStore = defineStore('comment', () => {
   async function loadComments(articleSlug) {
     loading.value = true;
     try {
-      const res = await client.get(`/api/articles/${articleSlug}/comments`);
+      const res = await getComments(articleSlug);
       if (res.data.success) {
         articleComments.value[articleSlug] = (res.data.data || []).map(normalizeComment);
       }
@@ -72,10 +73,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 添加评论
   async function addComment(articleSlug, content, parentId = null) {
-    const res = await client.post(`/api/articles/${articleSlug}/comments`, {
-      content,
-      parentId: parentId || undefined,
-    });
+    const res = await addCommentApi(articleSlug, { content, parentId });
     if (res.data.success) {
       const cached = articleComments.value[articleSlug] || [];
       const normalized = normalizeComment(res.data.data);
@@ -87,7 +85,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 更新评论
   async function updateComment(commentId, content) {
-    const res = await client.put(`/api/comments/${commentId}`, { content });
+    const res = await updateCommentApi(commentId, content);
     if (res.data.success) {
       // Update in all cached article comment lists
       Object.keys(articleComments.value).forEach((slug) => {
@@ -104,7 +102,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 软删除评论
   async function deleteComment(commentId) {
-    const res = await client.delete(`/api/comments/${commentId}`);
+    const res = await deleteCommentApi(commentId);
     if (res.data.success) {
       Object.keys(articleComments.value).forEach((slug) => {
         articleComments.value[slug] = articleComments.value[slug].filter(
@@ -118,7 +116,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 批量软删除评论（管理员）
   async function batchDeleteComments(ids) {
-    const res = await client.post('/api/admin/comments/batch-delete', { ids });
+    const res = await batchDeleteApi(ids);
     if (res.data.success) {
       Object.keys(articleComments.value).forEach((slug) => {
         articleComments.value[slug] = articleComments.value[slug].filter(
@@ -132,7 +130,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 永久删除评论（管理员）
   async function permanentDeleteComment(commentId) {
-    const res = await client.delete(`/api/comments/${commentId}/permanent`);
+    const res = await permanentDeleteApi(commentId);
     if (res.data.success) {
       Object.keys(articleComments.value).forEach((slug) => {
         articleComments.value[slug] = articleComments.value[slug].filter(
@@ -146,7 +144,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 切换置顶
   async function toggleSticky(commentId) {
-    const res = await client.put(`/api/comments/${commentId}/sticky`);
+    const res = await toggleSticky(commentId);
     if (res.data.success) {
       // Invalidate cache — reload needed
       return { success: true, sticky: res.data.data.sticky };
@@ -156,7 +154,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   // 点赞评论
   async function likeComment(commentId) {
-    const res = await client.post(`/api/comments/${commentId}/like`);
+    const res = await likeCommentApi(commentId);
     if (res.data.success) {
       Object.keys(articleComments.value).forEach((slug) => {
         const list = articleComments.value[slug];
@@ -182,7 +180,7 @@ export const useCommentStore = defineStore('comment', () => {
 
   async function loadTotalCount() {
     try {
-      const res = await client.get('/api/stats');
+      const res = await getStats();
       if (res.data.success) {
         totalCount.value = res.data.data.totalComments;
       }

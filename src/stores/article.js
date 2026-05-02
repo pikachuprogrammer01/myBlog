@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import client from '@/api/client';
+import { getArticles, getCategories, toggleLike, getLikeStatus, toggleBookmark, getBookmarkStatus, getBookmarks } from '@/api/services/articleService';
 import articlesData from '@/data/articles.json';
 import { getCache, setCache } from '@/utils/cache';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
@@ -56,7 +56,7 @@ export const useArticleStore = defineStore('article', () => {
     // Step 3: API refresh in background (stale-while-revalidate)
     const promise = (async () => {
       try {
-        const res = await client.get('/api/articles', { params: { limit: 100 } });
+        const res = await getArticles({ limit: 100 });
         if (res.data.success) {
           articles.value = res.data.data.map(mapArticle);
           setCache(STORAGE_KEYS.CACHED_ARTICLES, articles.value);
@@ -85,7 +85,7 @@ export const useArticleStore = defineStore('article', () => {
     }
 
     try {
-      const res = await client.get('/api/categories');
+      const res = await getCategories();
       if (res.data.success) {
         categories.value = res.data.data.map((c) => ({
           id: c.slug,
@@ -194,7 +194,7 @@ export const useArticleStore = defineStore('article', () => {
 
   // Like — via API
   async function toggleLike(slug) {
-    const res = await client.post(`/api/articles/${slug}/like`);
+    const res = await toggleLike(slug);
     if (res.data.success) {
       return { liked: res.data.data.liked, likes: res.data.data.likes };
     }
@@ -203,7 +203,7 @@ export const useArticleStore = defineStore('article', () => {
 
   async function getLikeStatus(slug) {
     try {
-      const res = await client.get(`/api/articles/${slug}/like`);
+      const res = await getLikeStatus(slug);
       // API now returns { likes, liked } — liked is false if not authenticated
       return res.data.success ? res.data.data : { likes: 0, liked: false };
     } catch {
@@ -213,7 +213,7 @@ export const useArticleStore = defineStore('article', () => {
 
   // Bookmark — via API
   async function toggleBookmark(slug) {
-    const res = await client.post(`/api/articles/${slug}/bookmark`);
+    const res = await toggleBookmark(slug);
     if (res.data.success) {
       return { bookmarked: res.data.data.bookmarked };
     }
@@ -222,7 +222,7 @@ export const useArticleStore = defineStore('article', () => {
 
   async function getBookmarkStatus(slug) {
     try {
-      const res = await client.get(`/api/articles/${slug}/bookmark`);
+      const res = await getBookmarkStatus(slug);
       return res.data.success ? res.data.data : { bookmarks: 0, bookmarked: false };
     } catch {
       return { bookmarks: 0, bookmarked: false };
@@ -231,7 +231,7 @@ export const useArticleStore = defineStore('article', () => {
 
   async function getBookmarks() {
     try {
-      const res = await client.get('/api/user/bookmarks');
+      const res = await getBookmarks();
       return res.data.success ? res.data.data : [];
     } catch {
       return [];

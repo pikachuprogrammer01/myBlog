@@ -2,6 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '../auth.js'
 
+// Mock auth service
+vi.mock('@/api/services/authService', () => ({
+  login: vi.fn(),
+  register: vi.fn(),
+  getProfile: vi.fn(),
+}))
+
+import { login as loginApi, register as registerApi, getProfile } from '@/api/services/authService'
+
 // 模拟localStorage
 const localStorageMock = (() => {
   let store = {}
@@ -26,10 +35,9 @@ Object.defineProperty(window, 'localStorage', {
 
 describe('auth store', () => {
   beforeEach(() => {
-    // 创建新的pinia实例
     setActivePinia(createPinia())
-    // 清除localStorage模拟
     localStorageMock.clear()
+    vi.clearAllMocks()
   })
 
   it('初始状态正确', () => {
@@ -40,11 +48,19 @@ describe('auth store', () => {
     expect(authStore.isAdmin).toBe(false)
   })
 
-  it('登录成功硬编码用户', () => {
-    const authStore = useAuthStore()
+  it('登录成功', async () => {
+    loginApi.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          user: { username: 'admin', role: 'admin' },
+          token: 'fake-token',
+        },
+      },
+    })
 
-    // 使用硬编码用户admin/admin123
-    const result = authStore.login('admin', 'admin123')
+    const authStore = useAuthStore()
+    const result = await authStore.login('admin', 'admin123')
 
     expect(result.success).toBe(true)
     expect(authStore.isAuthenticated).toBe(true)
@@ -54,10 +70,13 @@ describe('auth store', () => {
     expect(authStore.isAdmin).toBe(true)
   })
 
-  it('登录失败无效凭据', () => {
-    const authStore = useAuthStore()
+  it('登录失败无效凭据', async () => {
+    loginApi.mockRejectedValue({
+      response: { data: { message: '用户名或密码错误' } },
+    })
 
-    const result = authStore.login('wrong', 'wrong')
+    const authStore = useAuthStore()
+    const result = await authStore.login('wrong', 'wrong')
 
     expect(result.success).toBe(false)
     expect(result.message).toBe('用户名或密码错误')
@@ -65,39 +84,53 @@ describe('auth store', () => {
     expect(authStore.user).toBeNull()
   })
 
-  it('注册新用户成功', () => {
-    const authStore = useAuthStore()
+  it('注册新用户成功', async () => {
+    registerApi.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          user: { username: 'newuser', role: 'user' },
+          token: 'fake-token',
+        },
+      },
+    })
 
-    const result = authStore.register('newuser', 'newpass123')
+    const authStore = useAuthStore()
+    const result = await authStore.register('newuser', 'newpass123')
 
     expect(result.success).toBe(true)
-    // 注册后自动登录
     expect(authStore.isAuthenticated).toBe(true)
     expect(authStore.user.username).toBe('newuser')
-    expect(authStore.user.role).toBe('user') // 默认角色
+    expect(authStore.user.role).toBe('user')
   })
 
-  it('注册失败用户名已存在', () => {
+  it('注册失败用户名已存在', async () => {
+    registerApi.mockRejectedValue({
+      response: { data: { message: '用户名已存在' } },
+    })
+
     const authStore = useAuthStore()
-
-    // 第一次注册成功
-    authStore.register('existing', 'pass123')
-
-    // 第二次注册相同用户名
-    const result = authStore.register('existing', 'pass456')
+    const result = await authStore.register('existing', 'pass456')
 
     expect(result.success).toBe(false)
     expect(result.message).toBe('用户名已存在')
   })
 
-  it('注销清除状态', () => {
-    const authStore = useAuthStore()
+  it('注销清除状态', async () => {
+    loginApi.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          user: { username: 'admin', role: 'admin' },
+          token: 'fake-token',
+        },
+      },
+    })
 
-    // 先登录
-    authStore.login('admin', 'admin123')
+    const authStore = useAuthStore()
+    await authStore.login('admin', 'admin123')
     expect(authStore.isAuthenticated).toBe(true)
 
-    // 注销
     authStore.logout()
 
     expect(authStore.isAuthenticated).toBe(false)

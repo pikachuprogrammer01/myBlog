@@ -1,5 +1,9 @@
 <template>
-  <div :class="['article-card', layout]" @click="handleClick">
+  <div :class="['article-card', layout, { 'is-navigating': navigating }]" @click="handleClick">
+    <div v-if="navigating" class="navigating-overlay">
+      <el-icon class="is-loading"><Loading /></el-icon>
+      <span>加载中...</span>
+    </div>
     <div class="card-inner">
       <div class="cover-wrapper">
         <el-image
@@ -43,11 +47,14 @@
 </template>
 
 <script setup>
-  import { computed } from "vue";
+  import { computed, ref } from "vue";
   import { useRouter } from "vue-router";
-  import { Calendar, View } from "@element-plus/icons-vue";
+  import { Calendar, Loading, Picture, View } from "@element-plus/icons-vue";
   import dayjs from "dayjs";
   import { resolveArticleCover } from "@/utils/article-cover";
+  import { useNavigationLoading } from "@/composables/useNavigationLoading";
+
+  const { isNavigating, startNavigation } = useNavigationLoading();
 
   const props = defineProps({
     article: {
@@ -109,9 +116,13 @@
     resolveArticleCover(props.article.cover, props.article.id || props.article.title),
   );
 
+  const navigating = ref(false);
+
   // 处理点击
   const handleClick = () => {
-    if (props.clickable) {
+    if (props.clickable && !isNavigating.value) {
+      navigating.value = true;
+      startNavigation();
       emit("click", props.article);
       router.push(`/article/${props.article.id}`);
     }
@@ -153,6 +164,27 @@
     border-radius: 12px;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     overflow: hidden;
+    cursor: pointer;
+    position: relative;
+
+    &.is-navigating {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .navigating-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--blog-primary-color, #409eff);
+      font-size: 14px;
+    }
 
     &:hover {
       transform: translateY(-8px);
