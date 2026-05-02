@@ -27,3 +27,19 @@ export function resetAllData() {
 export function testEmailConfig() {
   return client.post('/api/admin/email-test');
 }
+
+export function getTags() {
+  return client.get('/api/admin/tags');
+}
+
+export function createTag(name) {
+  return client.post('/api/admin/tags', { name });
+}
+
+export function updateTag(id, name) {
+  return client.put(`/api/admin/tags/${id}`, { name });
+}
+
+export function deleteTag(id) {
+  return client.delete(`/api/admin/tags/${id}`);
+}

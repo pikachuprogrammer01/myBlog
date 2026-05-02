@@ -67,5 +67,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SectionHeader: typeof import('./components/home/SectionHeader.vue')['default']
     Sidebar: typeof import('./components/home/Sidebar.vue')['default']
+    TagManager: typeof import('./components/admin/TagManager.vue')['default']
   }
 }

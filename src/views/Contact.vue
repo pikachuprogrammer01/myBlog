@@ -155,7 +155,9 @@ async function handleSubmit() {
     if (error?.response) {
       const msg = error.response.data?.message || "发送失败";
       ElMessage.error(msg);
-      // 如果是节流错误，刷新剩余次数
+      form.subject = "";
+      form.message = "";
+      formRef.value?.clearValidate();
       if (error.response.status === 429) {
         loadRemaining();
       }

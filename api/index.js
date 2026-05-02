@@ -17,6 +17,7 @@ const {
   getBookmarkStatus,
 } = require('./routes/likes');
 const { submitContact, getContactMessages, markRead, getRemaining, testEmailConfig } = require('./routes/contact');
+const { getTags, createTag, updateTag, deleteTag } = require('./routes/tags');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -389,6 +390,22 @@ module.exports = async (req, res) => {
     // ============ Admin: Email Test ============
     if (pathname === '/api/admin/email-test' && req.method === 'POST') {
       return await testEmailConfig(req, res);
+    }
+
+    // ============ Admin: Tags Management ============
+    if (pathname === '/api/admin/tags' && req.method === 'GET') {
+      return await getTags(req, res);
+    }
+    if (pathname === '/api/admin/tags' && req.method === 'POST') {
+      return await createTag(req, res);
+    }
+    if (pathname.match(/^\/api\/admin\/tags\/\d+$/) && req.method === 'PUT') {
+      const tagId = parseInt(pathname.split('/').pop());
+      return await updateTag(req, res, tagId);
+    }
+    if (pathname.match(/^\/api\/admin\/tags\/\d+$/) && req.method === 'DELETE') {
+      const tagId = parseInt(pathname.split('/').pop());
+      return await deleteTag(req, res, tagId);
     }
 
     // ============ Admin: Batch Delete Comments ============
