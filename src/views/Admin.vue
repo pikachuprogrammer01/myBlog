@@ -281,8 +281,10 @@
 
       const dateStr = new Date().toISOString().split("T")[0];
       const wb = utils.book_new();
+      let fileName = `blog-data-${dateStr}.xlsx`;
 
       if (activeTab.value === "overview") {
+        fileName = `blog-overview-${dateStr}.xlsx`;
         // Sheet 1: 数据概览
         utils.book_append_sheet(
           wb,
@@ -307,6 +309,7 @@
           );
         }
       } else if (activeTab.value === "articles") {
+        fileName = `blog-article-stats-${dateStr}.xlsx`;
         const data = articleStats.value.map((a) => ({
           文章标题: a.title,
           状态: a.status === "published" ? "已发布" : "草稿",
@@ -320,6 +323,7 @@
         }));
         utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章数据");
       } else if (activeTab.value === "comments") {
+        fileName = `blog-comments-${dateStr}.xlsx`;
         const data = comments.value.map((c) => ({
           用户: c.username || "-",
           评论内容: c.content || "-",
@@ -330,6 +334,7 @@
         }));
         utils.book_append_sheet(wb, utils.json_to_sheet(data), "评论管理");
       } else if (activeTab.value === "article-manage") {
+        fileName = `blog-article-list-${dateStr}.xlsx`;
         const res = await getAdminArticleList({ limit: 1000 });
         if (res.data.success) {
           const data = res.data.data.map((a) => ({
@@ -349,6 +354,7 @@
           utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章管理");
         }
       } else if (activeTab.value === "tags") {
+        fileName = `blog-tags-${dateStr}.xlsx`;
         const tagData = (tagManagerRef.value?.tags || []).map((t) => ({
           标签名称: t.name,
           别名: t.slug,
@@ -357,7 +363,7 @@
         utils.book_append_sheet(wb, utils.json_to_sheet(tagData), "标签管理");
       }
 
-      writeFile(wb, `blog-data-${dateStr}.xlsx`);
+      writeFile(wb, fileName);
       ElMessage.success("数据导出成功");
     } catch {
       ElMessage.error("导出失败");
