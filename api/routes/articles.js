@@ -1,6 +1,25 @@
 const { requireAdmin } = require('../middleware/auth');
 const pool = require('../db');
 
+let columnsReady = false;
+
+async function ensureArticleColumns() {
+  if (columnsReady) return;
+  try {
+    // cover_image: prevent URL/base64 truncation
+    await pool.execute(
+      "ALTER TABLE articles MODIFY COLUMN cover_image VARCHAR(2048)"
+    );
+  } catch {}
+  try {
+    // content: ensure enough room for articles with inline images
+    await pool.execute(
+      "ALTER TABLE articles MODIFY COLUMN content MEDIUMTEXT"
+    );
+  } catch {}
+  columnsReady = true;
+}
+
 // ========== Multipart 解析器 ==========
 
 async function parseRawBody(req) {
@@ -54,8 +73,48 @@ function parseMultipart(buffer, contentType) {
   return { fields, files };
 }
 
-// ========== 图片 → base64 ==========
+// ========== 图片处理（OSS 优先，base64 兜底） ==========
 
+const { isConfigured: isOssConfigured, mirrorImage, uploadImage } = require('../utils/oss');
+
+const MAX_IMAGE_BYTES = 200 * 1024; // base64 fallback: 200KB per image
+
+// OSS 模式：下载远程图片 → 上传 OSS → 替换为 OSS URL
+async function mirrorImagesToOss(mdContent) {
+  const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g;
+  const matches = [...mdContent.matchAll(imgRegex)];
+  if (matches.length === 0) return mdContent;
+
+  const urlMap = new Map();
+  for (const m of matches) {
+    const url = m[2];
+    if (!urlMap.has(url)) urlMap.set(url, null);
+  }
+
+  const urls = [...urlMap.keys()];
+  for (let i = 0; i < urls.length; i += 5) {
+    const batch = urls.slice(i, i + 5);
+    const results = await Promise.allSettled(
+      batch.map((url) => mirrorImage(url, 'blog/images'))
+    );
+    batch.forEach((url, idx) => {
+      if (results[idx].status === 'fulfilled' && results[idx].value) {
+        urlMap.set(url, results[idx].value);
+      }
+    });
+  }
+
+  let result = mdContent;
+  for (const [url, ossUrl] of urlMap) {
+    if (ossUrl) {
+      const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escaped, 'g'), ossUrl);
+    }
+  }
+  return result;
+}
+
+// base64 兜底模式
 async function convertImagesToBase64(mdContent) {
   const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g;
   const matches = [...mdContent.matchAll(imgRegex)];
@@ -67,10 +126,9 @@ async function convertImagesToBase64(mdContent) {
     if (!urlMap.has(url)) urlMap.set(url, null);
   }
 
-  const BATCH_SIZE = 5;
   const urls = [...urlMap.keys()];
-  for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-    const batch = urls.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < urls.length; i += 5) {
+    const batch = urls.slice(i, i + 5);
     const results = await Promise.allSettled(
       batch.map(async (url) => {
         const controller = new AbortController();
@@ -79,9 +137,15 @@ async function convertImagesToBase64(mdContent) {
           const res = await fetch(url, { signal: controller.signal });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const arrayBuffer = await res.arrayBuffer();
+          if (arrayBuffer.byteLength > MAX_IMAGE_BYTES) {
+            console.log(`[Articles] 图片过大(${(arrayBuffer.byteLength / 1024).toFixed(0)}KB)，保留原始链接: ${url}`);
+            return null;
+          }
           const buffer = Buffer.from(arrayBuffer);
           const contentType = res.headers.get('content-type') || 'image/png';
           return `data:${contentType};base64,${buffer.toString('base64')}`;
+        } catch {
+          return null;
         } finally {
           clearTimeout(timeout);
         }
@@ -102,6 +166,29 @@ async function convertImagesToBase64(mdContent) {
     }
   }
   return result;
+}
+
+// 处理文章中的图片：OSS 配置了 → 上传到 OSS；没配置 → base64 兜底
+async function processContentImages(mdContent) {
+  if (isOssConfigured()) {
+    return await mirrorImagesToOss(mdContent);
+  }
+  return await convertImagesToBase64(mdContent);
+}
+
+// 上传 base64 封面图到 OSS
+async function uploadCoverToOss(base64DataUri) {
+  if (!isOssConfigured()) return null;
+  const match = base64DataUri.match(/^data:(image\/\w+);base64,(.+)$/);
+  if (!match) return null;
+  try {
+    const buffer = Buffer.from(match[2], 'base64');
+    const contentType = match[1];
+    const ext = contentType.split('/')[1] || 'png';
+    return await uploadImage('blog/covers', buffer, contentType, `cover.${ext}`);
+  } catch {
+    return null;
+  }
 }
 
 // ========== 分类辅助 ==========
@@ -217,6 +304,7 @@ async function createArticle(req, res) {
   const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
   try {
+    await ensureArticleColumns();
     const [result] = await pool.execute(
       `INSERT INTO articles (title, slug, content, summary, cover_image, category_id, tags, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -254,6 +342,7 @@ async function updateArticle(req, res, id) {
   const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
 
   try {
+    await ensureArticleColumns();
     const [result] = await pool.execute(
       `UPDATE articles SET title=?, slug=?, content=?, summary=?, cover_image=?,
        category_id=?, tags=?, status=?, updated_at=NOW() WHERE id=?`,
@@ -352,21 +441,29 @@ async function uploadArticleMd(req, res) {
     } catch {}
   }
 
-  // 下载远程图片 → base64
+  // 处理图片：OSS 模式或 base64 兜底
   let processedContent;
   try {
-    processedContent = await convertImagesToBase64(bodyContent);
+    processedContent = await processContentImages(bodyContent);
   } catch {
     processedContent = bodyContent;
+  }
+
+  // 封面图：如果是 base64，上传到 OSS
+  let coverUrl = coverImage;
+  if (coverUrl && coverUrl.startsWith('data:image/')) {
+    const ossCoverUrl = await uploadCoverToOss(coverUrl);
+    if (ossCoverUrl) coverUrl = ossCoverUrl;
   }
 
   const tagsJson = JSON.stringify(tags);
 
   try {
+    await ensureArticleColumns();
     const [result] = await pool.execute(
       `INSERT INTO articles (title, slug, content, summary, cover_image, category_id, tags, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')`,
-      [title, articleSlug, processedContent, summary, coverImage, categoryId, tagsJson]
+      [title, articleSlug, processedContent, summary, coverUrl, categoryId, tagsJson]
     );
 
     // 同步标签字典

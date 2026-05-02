@@ -40,6 +40,10 @@
         <el-tab-pane label="工具管理" name="tools">
           <ToolManager ref="toolManagerRef" />
         </el-tab-pane>
+
+        <el-tab-pane label="用户管理" name="users">
+          <UserManager ref="userManagerRef" />
+        </el-tab-pane>
       </el-tabs>
 
       <DataActions
@@ -71,6 +75,7 @@
   import TagManager from "@/components/admin/TagManager.vue";
   import ArticleManager from "@/components/admin/ArticleManager.vue";
 import ToolManager from "@/components/admin/ToolManager.vue";
+import UserManager from "@/components/admin/UserManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
   const router = useRouter();
@@ -93,6 +98,7 @@ import ToolManager from "@/components/admin/ToolManager.vue";
   const articleStats = ref([]);
   const tagManagerRef = ref(null);
   const toolManagerRef = ref(null);
+const userManagerRef = ref(null);
   const overviewChartRef = ref(null);
 
   const categoryOptions = computed(() => {
@@ -378,6 +384,16 @@ import ToolManager from "@/components/admin/ToolManager.vue";
           排序: t.sort_order,
         }));
         utils.book_append_sheet(wb, utils.json_to_sheet(toolData), "工具管理");
+      } else if (activeTab.value === "users") {
+        fileName = `blog-users-${dateStr}.xlsx`;
+        const userData = (userManagerRef.value?.users || []).map((u) => ({
+          用户名: u.username,
+          角色: u.role === "admin" ? "管理员" : "普通用户",
+          注册时间: u.created_at
+            ? new Date(u.created_at).toLocaleString("zh-CN")
+            : "-",
+        }));
+        utils.book_append_sheet(wb, utils.json_to_sheet(userData), "用户管理");
       }
 
       writeFile(wb, fileName);

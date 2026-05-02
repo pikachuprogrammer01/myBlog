@@ -98,3 +98,20 @@ export function updateTool(id, data) {
 export function deleteTool(id) {
   return client.delete(`/api/admin/tools/${id}`);
 }
+
+// User CRUD
+export function getAdminUsers(params = {}) {
+  return client.get('/api/admin/users', { params });
+}
+
+export function getAdminUser(id) {
+  return client.get(`/api/admin/users/${id}`);
+}
+
+export function updateAdminUser(id, data) {
+  return client.put(`/api/admin/users/${id}`, data);
+}
+
+export function deleteAdminUser(id) {
+  return client.delete(`/api/admin/users/${id}`);
+}
