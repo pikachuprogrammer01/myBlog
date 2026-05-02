@@ -27,8 +27,14 @@ app.use('/api/admin/articles/upload', express.raw({
   limit: '50mb',
 }));
 
-// 3. JSON body parser
-app.use(express.json({ limit: '10mb' }));
+// 2. JSON body parser (compatible with Vercel's pre-parsed req.body)
+app.use((req, res, next) => {
+  // Vercel @vercel/node helper pre-parses JSON body — if already done, skip Express parser
+  if (req.body && typeof req.body === 'object' && !(req.body instanceof Buffer)) {
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, next);
+});
 
 // 4. Mount public routes
 const authRouter = require('./routes/auth');
