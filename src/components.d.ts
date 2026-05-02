@@ -44,6 +44,7 @@ declare module 'vue' {
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElImage: typeof import('element-plus/es')['ElImage']
     ElInput: typeof import('element-plus/es')['ElInput']
+    ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElPagination: typeof import('element-plus/es')['ElPagination']
     ElProgress: typeof import('element-plus/es')['ElProgress']
@@ -71,6 +72,8 @@ declare module 'vue' {
     SectionHeader: typeof import('./components/home/SectionHeader.vue')['default']
     Sidebar: typeof import('./components/home/Sidebar.vue')['default']
     TagManager: typeof import('./components/admin/TagManager.vue')['default']
+    ToolManager: typeof import('./components/admin/ToolManager.vue')['default']
+    UserManager: typeof import('./components/admin/UserManager.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

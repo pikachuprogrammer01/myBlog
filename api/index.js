@@ -20,6 +20,7 @@ const { submitContact, getContactMessages, markRead, getRemaining, testEmailConf
 const { getTags, createTag, updateTag, deleteTag, getPublicTags } = require('./routes/tags');
 const { listArticles, getArticle, createArticle, updateArticle, deleteArticle, uploadArticleMd } = require('./routes/articles');
 const { getTools, createTool, updateTool, deleteTool, getPublicTools } = require('./routes/tools');
+const { listUsers, getUser, updateUser, deleteUser } = require('./routes/users');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -457,6 +458,23 @@ module.exports = async (req, res) => {
     if (pathname.match(/^\/api\/admin\/articles\/\d+$/) && req.method === 'DELETE') {
       const articleId = parseInt(pathname.split('/').pop());
       return await deleteArticle(req, res, articleId);
+    }
+
+    // ============ Admin: User Management ============
+    if (pathname === '/api/admin/users' && req.method === 'GET') {
+      return await listUsers(req, res);
+    }
+    if (pathname.match(/^\/api\/admin\/users\/\d+$/) && req.method === 'GET') {
+      const userId = parseInt(pathname.split('/').pop());
+      return await getUser(req, res, userId);
+    }
+    if (pathname.match(/^\/api\/admin\/users\/\d+$/) && req.method === 'PUT') {
+      const userId = parseInt(pathname.split('/').pop());
+      return await updateUser(req, res, userId);
+    }
+    if (pathname.match(/^\/api\/admin\/users\/\d+$/) && req.method === 'DELETE') {
+      const userId = parseInt(pathname.split('/').pop());
+      return await deleteUser(req, res, userId);
     }
 
     // ============ Admin: Batch Delete Comments ============

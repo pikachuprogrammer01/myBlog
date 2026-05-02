@@ -58,32 +58,6 @@
           </div>
         </el-form>
 
-        <el-divider>
-          <span class="divider-text">演示账号</span>
-        </el-divider>
-
-        <div class="demo-accounts">
-          <el-tooltip content="点击快速填充" placement="top">
-            <el-tag
-              size="small"
-              effect="plain"
-              @click="
-                form.username = 'admin';
-                form.password = 'admin123';
-              "
-              >管理员</el-tag
-            >
-          </el-tooltip>
-          <el-tag
-            size="small"
-            effect="plain"
-            @click="
-              form.username = 'user1';
-              form.password = 'user123';
-            "
-            >普通用户</el-tag
-          >
-        </div>
       </div>
     </div>
   </div>
@@ -232,29 +206,6 @@
       margin-top: 20px;
       font-size: 14px;
       color: var(--blog-text-secondary);
-    }
-  }
-
-  .divider-text {
-    font-size: 12px;
-    color: var(--blog-text-muted);
-    font-weight: normal;
-  }
-
-  .demo-accounts {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 10px;
-
-    .el-tag {
-      cursor: pointer;
-      transition: all 0.2s;
-      &:hover {
-        transform: translateY(-2px);
-        background: var(--el-color-primary);
-        color: white;
-      }
     }
   }
 
