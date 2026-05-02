@@ -28,6 +28,10 @@
             @batchDelete="batchDeleteComments"
           />
         </el-tab-pane>
+
+        <el-tab-pane label="标签管理" name="tags">
+          <TagManager />
+        </el-tab-pane>
       </el-tabs>
 
       <DataActions
@@ -56,6 +60,7 @@
   import AdminStats from "@/components/admin/AdminStats.vue";
   import CommentManager from "@/components/admin/CommentManager.vue";
   import ArticleStatsTable from "@/components/admin/ArticleStatsTable.vue";
+  import TagManager from "@/components/admin/TagManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
   const router = useRouter();
