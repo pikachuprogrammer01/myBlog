@@ -29,7 +29,7 @@
             >
               <el-icon><Promotion /></el-icon>
             </a>
-            <a href="https://mail.qq.com/" class="social-link" title="邮箱">
+            <a href="#" class="social-link" title="邮箱" @click.prevent="goToContact">
               <el-icon><Message /></el-icon>
             </a>
           </div>
@@ -146,6 +146,7 @@
 
 <script setup>
   import { computed, onMounted } from "vue";
+  import { useRouter } from "vue-router";
   import {
     InfoFilled,
     Platform,
@@ -173,8 +174,13 @@
   import { useArticles } from "@/composables/useArticles";
   import { useComments } from "@/composables/useComments";
 
+  const router = useRouter();
   const { getArticles, getTotalViews } = useArticles();
   const { getTotalCommentCount, loadTotalCommentCount } = useComments();
+
+  const goToContact = () => {
+    router.push("/contact");
+  };
 
   // 当前年份
   const currentYear = computed(() => new Date().getFullYear());

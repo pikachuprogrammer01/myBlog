@@ -27,12 +27,15 @@ export default function useHome () {
     return allArticles.value.filter(a => a.cover).slice(0, 3)
   })
 
+  const popularTags = computed(() => articleStore.getPopularTags)
+
   return {
     layout,
     currentPage,
     pageSize,
     total,
     articles: displayedArticles,
-    featuredArticles
+    featuredArticles,
+    popularTags
   }
 }

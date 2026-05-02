@@ -61,6 +61,8 @@ import { ref, computed, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import { getTags, createTag, updateTag, deleteTag } from "@/api/services/adminService";
+import { removeCache } from "@/utils/cache";
+import { STORAGE_KEYS } from "@/constants/storage-keys";
 
 const tags = ref([]);
 const searchQuery = ref("");
@@ -105,6 +107,7 @@ async function handleAdd() {
     if (res.data.success) {
       ElMessage.success("标签已添加");
       newTagName.value = "";
+      removeCache(STORAGE_KEYS.CACHED_ARTICLES);
       await loadTags();
     } else {
       ElMessage.error(res.data.message || "添加失败");
@@ -138,6 +141,7 @@ async function handleSave(id) {
       ElMessage.success("标签已更新");
       editingId.value = null;
       editName.value = "";
+      removeCache(STORAGE_KEYS.CACHED_ARTICLES);
       await loadTags();
     } else {
       ElMessage.error(res.data.message || "更新失败");
@@ -158,6 +162,7 @@ function handleDelete(row) {
         const res = await deleteTag(row.id);
         if (res.data.success) {
           ElMessage.success("标签已删除");
+          removeCache(STORAGE_KEYS.CACHED_ARTICLES);
           await loadTags();
         } else {
           ElMessage.error(res.data.message || "删除失败");

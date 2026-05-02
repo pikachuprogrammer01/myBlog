@@ -43,7 +43,7 @@
             class="home-pagination"
           />
         </main>
-        <Sidebar v-if="articles.length" />
+        <Sidebar v-if="articles.length" :tags="popularTags" />
       </div>
     </div>
   </div>
@@ -66,7 +66,7 @@
   );
 
   // 初始化逻辑保持不变
-  const { layout, currentPage, pageSize, total, articles, featuredArticles } =
+  const { layout, currentPage, pageSize, total, articles, featuredArticles, popularTags } =
     useHome();
 </script>
 

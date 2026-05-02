@@ -13,7 +13,7 @@
         <el-tab-pane label="数据概览" name="overview">
           <AdminStats :stats="stats" />
           <div class="blog-card">
-            <AdminChart v-if="articles.length > 0" :options="categoryOptions" />
+            <AdminChart ref="overviewChartRef" v-if="articles.length > 0" :options="categoryOptions" />
           </div>
         </el-tab-pane>
 
@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted } from "vue";
+  import { ref, computed, onMounted, watch, nextTick } from "vue";
   import { useRouter } from "vue-router";
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
@@ -87,6 +87,7 @@
   const articles = ref([]);
   const articleStats = ref([]);
   const tagManagerRef = ref(null);
+  const overviewChartRef = ref(null);
 
   const categoryOptions = computed(() => {
     if (articles.value.length === 0) return {};
@@ -443,6 +444,14 @@
       })
       .catch(() => {});
   };
+
+  watch(activeTab, (newTab) => {
+    if (newTab === "overview") {
+      nextTick(() => {
+        overviewChartRef.value?.resize();
+      });
+    }
+  });
 
   onMounted(() => {
     loadData();
