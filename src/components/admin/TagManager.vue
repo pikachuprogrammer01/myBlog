@@ -2,6 +2,12 @@
   <div class="tag-manager">
     <div class="toolbar">
       <el-input
+        v-model="searchQuery"
+        placeholder="搜索标签..."
+        clearable
+        class="search-input"
+      />
+      <el-input
         v-model="newTagName"
         placeholder="输入新标签名称"
         maxlength="50"
@@ -11,10 +17,10 @@
       <el-button type="primary" :loading="adding" @click="handleAdd">
         <el-icon><Plus /></el-icon> 新增标签
       </el-button>
-      <span class="tag-count">共 {{ tags.length }} 个标签</span>
+      <span class="tag-count">找到 {{ filteredTags.length }} / 共 {{ tags.length }} 个标签</span>
     </div>
 
-    <el-table :data="tags" stripe class="tag-table">
+    <el-table :data="filteredTags" stripe class="tag-table">
       <el-table-column prop="name" label="标签名称" min-width="150">
         <template #default="{ row }">
           <span v-if="editingId !== row.id">{{ row.name }}</span>
@@ -51,16 +57,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import { getTags, createTag, updateTag, deleteTag } from "@/api/services/adminService";
 
 const tags = ref([]);
+const searchQuery = ref("");
 const newTagName = ref("");
 const adding = ref(false);
 const editingId = ref(null);
 const editName = ref("");
+
+const filteredTags = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return tags.value;
+  return tags.value.filter(
+    (t) => t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q)
+  );
+});
 
 const confirmBase = {
   appendTo: "#app",
@@ -166,6 +181,10 @@ onMounted(() => {
     align-items: center;
     gap: 12px;
     margin-bottom: var(--blog-spacing-md);
+
+    .search-input {
+      max-width: 200px;
+    }
 
     .tag-input {
       max-width: 280px;

@@ -18,6 +18,7 @@ const {
 } = require('./routes/likes');
 const { submitContact, getContactMessages, markRead, getRemaining, testEmailConfig } = require('./routes/contact');
 const { getTags, createTag, updateTag, deleteTag, getPublicTags } = require('./routes/tags');
+const { listArticles, getArticle, createArticle, updateArticle, deleteArticle, uploadArticleMd } = require('./routes/articles');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -411,6 +412,29 @@ module.exports = async (req, res) => {
     if (pathname.match(/^\/api\/admin\/tags\/\d+$/) && req.method === 'DELETE') {
       const tagId = parseInt(pathname.split('/').pop());
       return await deleteTag(req, res, tagId);
+    }
+
+    // ============ Admin: Article Management ============
+    if (pathname === '/api/admin/articles/upload' && req.method === 'POST') {
+      return await uploadArticleMd(req, res);
+    }
+    if (pathname === '/api/admin/articles' && req.method === 'GET') {
+      return await listArticles(req, res);
+    }
+    if (pathname === '/api/admin/articles' && req.method === 'POST') {
+      return await createArticle(req, res);
+    }
+    if (pathname.match(/^\/api\/admin\/articles\/\d+$/) && req.method === 'GET') {
+      const articleId = parseInt(pathname.split('/').pop());
+      return await getArticle(req, res, articleId);
+    }
+    if (pathname.match(/^\/api\/admin\/articles\/\d+$/) && req.method === 'PUT') {
+      const articleId = parseInt(pathname.split('/').pop());
+      return await updateArticle(req, res, articleId);
+    }
+    if (pathname.match(/^\/api\/admin\/articles\/\d+$/) && req.method === 'DELETE') {
+      const articleId = parseInt(pathname.split('/').pop());
+      return await deleteArticle(req, res, articleId);
     }
 
     // ============ Admin: Batch Delete Comments ============

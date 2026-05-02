@@ -21,6 +21,10 @@
           <ArticleStatsTable :articles="articleStats" />
         </el-tab-pane>
 
+        <el-tab-pane label="文章管理" name="article-manage">
+          <ArticleManager />
+        </el-tab-pane>
+
         <el-tab-pane label="评论管理" name="comments">
           <CommentManager
             :comments="comments"
@@ -61,6 +65,7 @@
   import CommentManager from "@/components/admin/CommentManager.vue";
   import ArticleStatsTable from "@/components/admin/ArticleStatsTable.vue";
   import TagManager from "@/components/admin/TagManager.vue";
+  import ArticleManager from "@/components/admin/ArticleManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
   const router = useRouter();

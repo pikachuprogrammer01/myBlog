@@ -259,4 +259,4 @@ async function getPublicTags(req, res) {
   }
 }
 
-module.exports = { getTags, createTag, updateTag, deleteTag, getPublicTags };
+module.exports = { getTags, createTag, updateTag, deleteTag, getPublicTags, syncTagsFromArticles };

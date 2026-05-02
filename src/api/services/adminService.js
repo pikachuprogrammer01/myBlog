@@ -43,3 +43,37 @@ export function updateTag(id, name) {
 export function deleteTag(id) {
   return client.delete(`/api/admin/tags/${id}`);
 }
+
+// Article CRUD
+export function getAdminArticleList(params = {}) {
+  return client.get('/api/admin/articles', { params });
+}
+
+export function getAdminArticle(id) {
+  return client.get(`/api/admin/articles/${id}`);
+}
+
+export function createAdminArticle(data) {
+  return client.post('/api/admin/articles', data);
+}
+
+export function updateAdminArticle(id, data) {
+  return client.put(`/api/admin/articles/${id}`, data);
+}
+
+export function deleteAdminArticle(id) {
+  return client.delete(`/api/admin/articles/${id}`);
+}
+
+export function uploadArticleMd(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return client.post('/api/admin/articles/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+}
+
+export function getCategories() {
+  return client.get('/api/categories');
+}

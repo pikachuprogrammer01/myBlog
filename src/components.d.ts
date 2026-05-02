@@ -15,6 +15,7 @@ declare module 'vue' {
     AdminStats: typeof import('./components/admin/AdminStats.vue')['default']
     ArticleCard: typeof import('./components/blog/ArticleCard.vue')['default']
     ArticleList: typeof import('./components/blog/ArticleList.vue')['default']
+    ArticleManager: typeof import('./components/admin/ArticleManager.vue')['default']
     ArticleStatsTable: typeof import('./components/admin/ArticleStatsTable.vue')['default']
     BackToTop: typeof import('./components/common/BackToTop.vue')['default']
     Carousel: typeof import('./components/common/Carousel.vue')['default']
@@ -32,6 +33,7 @@ declare module 'vue' {
     ElCarouselItem: typeof import('element-plus/es')['ElCarouselItem']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElCol: typeof import('element-plus/es')['ElCol']
+    ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDivider: typeof import('element-plus/es')['ElDivider']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
     ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
@@ -59,6 +61,7 @@ declare module 'vue' {
     ElTimeline: typeof import('element-plus/es')['ElTimeline']
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    ElUpload: typeof import('element-plus/es')['ElUpload']
     Footer: typeof import('./components/layout/Footer.vue')['default']
     Header: typeof import('./components/layout/Header.vue')['default']
     Main: typeof import('./components/layout/Main.vue')['default']
@@ -68,5 +71,8 @@ declare module 'vue' {
     SectionHeader: typeof import('./components/home/SectionHeader.vue')['default']
     Sidebar: typeof import('./components/home/Sidebar.vue')['default']
     TagManager: typeof import('./components/admin/TagManager.vue')['default']
+  }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }
