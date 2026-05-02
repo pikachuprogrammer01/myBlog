@@ -23,3 +23,7 @@ export function clearAllComments() {
 export function resetAllData() {
   return client.post('/api/admin/reset');
 }
+
+export function testEmailConfig() {
+  return client.post('/api/admin/email-test');
+}

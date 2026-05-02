@@ -10,6 +10,7 @@
       <el-button type="warning" @click="$emit('clearComments')"
         >清空评论</el-button
       >
+      <el-button type="success" @click="$emit('testEmail')">测试邮件</el-button>
       <el-button type="danger" @click="$emit('resetAll')">重置系统</el-button>
     </div>
   </div>

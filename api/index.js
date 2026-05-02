@@ -16,7 +16,7 @@ const {
   getUserBookmarks,
   getBookmarkStatus,
 } = require('./routes/likes');
-const { submitContact, getContactMessages, markRead, getRemaining } = require('./routes/contact');
+const { submitContact, getContactMessages, markRead, getRemaining, testEmailConfig } = require('./routes/contact');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -384,6 +384,11 @@ module.exports = async (req, res) => {
           return res.status(500).json({ success: false, message: '获取评论列表失败' });
         }
       }
+    }
+
+    // ============ Admin: Email Test ============
+    if (pathname === '/api/admin/email-test' && req.method === 'POST') {
+      return await testEmailConfig(req, res);
     }
 
     // ============ Admin: Batch Delete Comments ============

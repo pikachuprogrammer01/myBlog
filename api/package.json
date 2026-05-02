@@ -4,7 +4,8 @@
   "description": "",
    "dependencies": {
     "mysql2": "^3.22.3",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "nodemailer": "^8.0.7"
   },
   "author": "pikachu"
 }

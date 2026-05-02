@@ -34,6 +34,7 @@
         @export="exportData"
         @clearComments="clearAllComments"
         @resetAll="resetAllData"
+        @testEmail="testEmail"
       />
     </div>
   </div>
@@ -45,7 +46,7 @@
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
 
-  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi } from "@/api/services/adminService";
+  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
   import { getCache, setCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
@@ -352,6 +353,21 @@
         }
       })
       .catch(() => {});
+  };
+
+  const testEmail = async () => {
+    try {
+      const res = await testEmailConfig();
+      if (res.data.success) {
+        ElMessage.success(res.data.message || "测试邮件已发送");
+      } else {
+        ElMessage.error(res.data.message || "邮件测试失败");
+      }
+    } catch (error) {
+      ElMessage.error(
+        "邮件测试失败: " + (error.response?.data?.message || error.message),
+      );
+    }
   };
 
   const resetAllData = () => {
