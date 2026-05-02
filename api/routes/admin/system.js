@@ -47,6 +47,28 @@ router.post('/reset', async (req, res) => {
   }
 });
 
+// GET /api/admin/articles-stats — 每篇文章的点赞/评论/浏览/收藏数
+router.get('/articles-stats', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT a.id, a.title, a.slug, a.status, a.view_count, a.created_at,
+              COALESCE(l.likes, 0) as likes,
+              COALESCE(c.comments, 0) as comments,
+              COALESCE(b.bookmarks, 0) as bookmarks
+       FROM articles a
+       LEFT JOIN (SELECT article_id, COUNT(*) as likes FROM article_likes GROUP BY article_id) l ON a.id = l.article_id
+       LEFT JOIN (SELECT article_id, COUNT(*) as comments FROM comments WHERE is_deleted = 0 GROUP BY article_id) c ON a.id = c.article_id
+       LEFT JOIN (SELECT article_id, COUNT(*) as bookmarks FROM bookmarks GROUP BY article_id) b ON a.id = b.article_id
+       ORDER BY a.view_count DESC`
+    );
+
+    return res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error('获取文章统计失败:', error);
+    return res.status(500).json({ success: false, message: '获取文章统计失败' });
+  }
+});
+
 // POST /api/admin/email-test
 router.post('/email-test', async (req, res) => {
   if (!process.env.QQ_EMAIL_USER || !process.env.QQ_EMAIL_PASS) {
