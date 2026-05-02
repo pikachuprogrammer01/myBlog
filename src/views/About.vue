@@ -89,6 +89,7 @@
 
 <script setup>
   import { ref } from "vue";
+  import { useRouter } from "vue-router";
   import {
     User,
     Setting,
@@ -96,7 +97,6 @@
     Platform,
     Message,
   } from "@element-plus/icons-vue";
-  import { ElMessage } from "element-plus";
 
   const skills = ref([
     { name: "Java / Spring Boot", percentage: 80, color: "#e76f00" },
@@ -119,7 +119,7 @@
   };
   const getSkillType = (p) => {
     if (p >= 85) return "success";
-    if (p >= 70) return "";
+    if (p >= 70) return "primary";
     return "info";
   };
 
@@ -151,12 +151,14 @@
     },
   ]);
 
+  const router = useRouter();
+
   const openLink = (url) => {
     window.open(url, "_blank");
   };
 
   const clickEmal = () => {
-    ElMessage.warning({ message: "请联系本人qq邮箱：3142426048@qq.com" });
+    router.push("/contact");
   };
 </script>
 

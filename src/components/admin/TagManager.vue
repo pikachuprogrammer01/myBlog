@@ -169,6 +169,8 @@ function handleDelete(row) {
     .catch(() => {});
 }
 
+defineExpose({ tags, filteredTags });
+
 onMounted(() => {
   loadTags();
 });

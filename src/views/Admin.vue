@@ -34,7 +34,7 @@
         </el-tab-pane>
 
         <el-tab-pane label="标签管理" name="tags">
-          <TagManager />
+          <TagManager ref="tagManagerRef" />
         </el-tab-pane>
       </el-tabs>
 
@@ -54,7 +54,7 @@
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
 
-  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
+  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, getAdminArticleList, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
   import { getCache, setCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
@@ -86,6 +86,7 @@
   const comments = ref([]);
   const articles = ref([]);
   const articleStats = ref([]);
+  const tagManagerRef = ref(null);
 
   const categoryOptions = computed(() => {
     if (articles.value.length === 0) return {};
@@ -328,6 +329,32 @@
             : "-",
         }));
         utils.book_append_sheet(wb, utils.json_to_sheet(data), "评论管理");
+      } else if (activeTab.value === "article-manage") {
+        const res = await getAdminArticleList({ limit: 1000 });
+        if (res.data.success) {
+          const data = res.data.data.map((a) => ({
+            文章标题: a.title || "-",
+            状态: a.status === "published" ? "已发布" : "草稿",
+            分类: a.category_name || "-",
+            标签: Array.isArray(a.tags)
+              ? a.tags.join(", ")
+              : typeof a.tags === "string"
+                ? a.tags
+                : "-",
+            浏览: a.view_count || 0,
+            创建日期: a.created_at
+              ? new Date(a.created_at).toLocaleDateString("zh-CN")
+              : "-",
+          }));
+          utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章管理");
+        }
+      } else if (activeTab.value === "tags") {
+        const tagData = (tagManagerRef.value?.tags || []).map((t) => ({
+          标签名称: t.name,
+          别名: t.slug,
+          文章数: t.articleCount || 0,
+        }));
+        utils.book_append_sheet(wb, utils.json_to_sheet(tagData), "标签管理");
       }
 
       writeFile(wb, `blog-data-${dateStr}.xlsx`);
