@@ -15,7 +15,41 @@ async function ensureTable() {
       UNIQUE KEY uk_slug (slug)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await syncTagsFromArticles();
   tableReady = true;
+}
+
+// 从文章 JSON 数组中提取所有标签，自动写入字典表（已存在的跳过）
+async function syncTagsFromArticles() {
+  try {
+    const [articles] = await pool.execute('SELECT tags FROM articles');
+    const allTagNames = new Set();
+    articles.forEach((a) => {
+      let t;
+      try {
+        t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
+      } catch {
+        t = [];
+      }
+      (Array.isArray(t) ? t : []).forEach((name) => {
+        if (name && name.trim().length <= 50) {
+          allTagNames.add(name.trim());
+        }
+      });
+    });
+
+    for (const name of allTagNames) {
+      const slug = slugify(name);
+      if (!slug) continue;
+      try {
+        await pool.execute('INSERT IGNORE INTO tags (name, slug) VALUES (?, ?)', [name, slug]);
+      } catch {
+        // 跳过重复或无效的标签
+      }
+    }
+  } catch (error) {
+    console.error('[Tags] 同步文章标签到字典表失败:', error.message);
+  }
 }
 
 function slugify(text) {
@@ -183,4 +217,46 @@ async function deleteTag(req, res, id) {
   }
 }
 
-module.exports = { getTags, createTag, updateTag, deleteTag };
+// GET /api/tags — 公开接口，返回所有标签（含文章数），包含文章中有但未纳入管理的孤儿标签
+async function getPublicTags(req, res) {
+  try {
+    await ensureTable();
+    const [managedTags] = await pool.execute('SELECT id, name, slug, created_at FROM tags ORDER BY name');
+
+    // 从已发布文章 JSON 数组中统计每个标签的使用次数
+    const [articles] = await pool.execute('SELECT tags FROM articles WHERE status = ?', ['published']);
+    const usage = {};
+    articles.forEach((a) => {
+      let t;
+      try {
+        t = typeof a.tags === 'string' ? JSON.parse(a.tags) : a.tags;
+      } catch {
+        t = [];
+      }
+      (Array.isArray(t) ? t : []).forEach((name) => {
+        usage[name] = (usage[name] || 0) + 1;
+      });
+    });
+
+    // 已纳管的标签
+    const managedNames = new Set(managedTags.map((t) => t.name));
+    const data = managedTags.map((t) => ({ ...t, articleCount: usage[t.name] || 0 }));
+
+    // 文章中出现但未纳管的孤儿标签
+    Object.entries(usage).forEach(([name, count]) => {
+      if (!managedNames.has(name)) {
+        data.push({ id: null, name, slug: '', articleCount: count, created_at: null, orphan: true });
+      }
+    });
+
+    // 按文章数降序
+    data.sort((a, b) => b.articleCount - a.articleCount);
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error('[Tags] 获取公开标签列表失败:', error);
+    return res.status(500).json({ success: false, message: '获取标签失败' });
+  }
+}
+
+module.exports = { getTags, createTag, updateTag, deleteTag, getPublicTags };

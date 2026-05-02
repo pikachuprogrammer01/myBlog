@@ -17,7 +17,7 @@ const {
   getBookmarkStatus,
 } = require('./routes/likes');
 const { submitContact, getContactMessages, markRead, getRemaining, testEmailConfig } = require('./routes/contact');
-const { getTags, createTag, updateTag, deleteTag } = require('./routes/tags');
+const { getTags, createTag, updateTag, deleteTag, getPublicTags } = require('./routes/tags');
 
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
@@ -174,6 +174,11 @@ module.exports = async (req, res) => {
       );
 
       return res.status(200).json({ success: true, data: rows });
+    }
+
+    // ============ Public Tags ============
+    if (pathname === '/api/tags' && req.method === 'GET') {
+      return await getPublicTags(req, res);
     }
 
     // ============ Public Stats ============
