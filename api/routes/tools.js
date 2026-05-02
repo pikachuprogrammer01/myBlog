@@ -20,6 +20,31 @@ async function ensureTable() {
   tableReady = true;
 }
 
+const DEFAULT_TOOLS = [
+  ['Vue.js', '渐进式 JavaScript 框架，本项目核心技术。', 'https://vuejs.org/', 'https://vuejs.org/logo.svg', '前端工具', 1],
+  ['Element Plus', '基于 Vue 3，面向设计师和开发者的组件库。', 'https://element-plus.org/', 'https://element-plus.org/images/element-plus-logo-small.svg', '前端工具', 2],
+  ['MDN Web Docs', '最权威的 Web 开发技术文档，自学必备。', 'https://developer.mozilla.org/', 'https://developer.mozilla.org/favicon-48x48.png', '学习社区', 3],
+  ['Can I Use', '查询浏览器对前端特性的兼容性支持情况。', 'https://caniuse.com/', 'https://caniuse.com/img/favicon-128.png', '前端工具', 4],
+  ['Unsplash', '免费的高质量摄影图片库，适合找博客配图。', 'https://unsplash.com/', 'https://unsplash.com/favicon-32x32.png', '设计资源', 5],
+  ['Iconify', '统一的图标框架，可轻松使用数千个图标。', 'https://icon-sets.iconify.design/', 'https://icon-sets.iconify.design/favicon.ico', '设计资源', 6],
+  ['Spring Initializr', '快速生成 Spring Boot 项目骨架的官方神器。', 'https://start.spring.io/', 'https://spring.io/favicon.svg', 'Java/后端', 7],
+  ['Maven Repository', 'Java 依赖包查询库，配置 pom.xml 的必备站点。', 'https://mvnrepository.com/', 'https://mvnrepository.com/favicon.ico', 'Java/后端', 8],
+  ['Hutool', '一个让 Java 变得甜甜的工具库，大大简化代码。', 'https://hutool.cn/', 'https://plus.hutool.cn/images/logo.png', 'Java/后端', 9],
+  ['Postman', '接口调试利器，前后端联调的桥梁。', 'https://www.postman.com/', 'https://www.postman.com/favicon.ico', '开发辅助', 10],
+  ['JSON 格式化', '在线解析和美化 JSON 数据，后端接口联调必备。', 'https://www.json.cn/', 'https://www.json.cn/favicon.ico', '开发辅助', 11],
+];
+
+async function seedDefaultTools() {
+  const [rows] = await pool.execute('SELECT COUNT(*) as cnt FROM tools');
+  if (rows[0].cnt > 0) return;
+  for (const t of DEFAULT_TOOLS) {
+    await pool.execute(
+      'INSERT INTO tools (name, description, url, icon, category, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+      t
+    );
+  }
+}
+
 // GET /api/admin/tools
 async function getTools(req, res) {
   const user = await requireAdmin(req, res);
@@ -27,6 +52,7 @@ async function getTools(req, res) {
 
   try {
     await ensureTable();
+    await seedDefaultTools();
     const [rows] = await pool.execute('SELECT * FROM tools ORDER BY sort_order, id');
     return res.status(200).json({ success: true, data: rows });
   } catch (error) {
@@ -113,6 +139,7 @@ async function deleteTool(req, res, id) {
 async function getPublicTools(req, res) {
   try {
     await ensureTable();
+    await seedDefaultTools();
     const [rows] = await pool.execute('SELECT * FROM tools ORDER BY sort_order, id');
 
     if (rows.length === 0) {
