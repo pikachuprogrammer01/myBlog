@@ -42,9 +42,7 @@
         </div>
 
         <div class="user-actions">
-          <el-button type="primary" @click="handleLogout">
-            退出登录
-          </el-button>
+          <el-button type="primary" @click="handleLogout"> 退出登录 </el-button>
         </div>
       </div>
 
@@ -62,7 +60,11 @@
         </div>
         <div v-else>
           <el-table :data="myComments" style="width: 100%">
-            <el-table-column prop="articleTitle" label="文章标题" min-width="200">
+            <el-table-column
+              prop="articleTitle"
+              label="文章标题"
+              min-width="200"
+            >
               <template #default="{ row }">
                 <router-link :to="`/article/${row.articleId}`">
                   {{ row.articleTitle }}
@@ -83,190 +85,190 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+  import { computed, ref, onMounted } from "vue";
+  import { useRouter } from "vue-router";
+  import { ElMessage, ElMessageBox } from "element-plus";
 
-import { useAuth } from '@/composables/useAuth'
-import { useArticles } from '@/composables/useArticles'
-import { formatDate } from '@/utils/date'
-import { getProfile } from '@/api/services/authService'
-import { User, ChatDotRound, Calendar } from '@element-plus/icons-vue'
+  import { useAuth } from "@/composables/useAuth";
+  import { useArticles } from "@/composables/useArticles";
+  import { formatDate } from "@/utils/date";
+  import { getProfile } from "@/api/services/authService";
+  import { User, ChatDotRound, Calendar } from "@element-plus/icons-vue";
 
-const router = useRouter()
-const { currentUser: user, logout } = useAuth()
-const { getArticle } = useArticles()
-const myComments = ref([])
+  const router = useRouter();
+  const { currentUser: user, logout } = useAuth();
+  const { getArticle } = useArticles();
+  const myComments = ref([]);
 
-const userAvatar = computed(() => {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value?.username}`
-})
+  const userAvatar = computed(() => {
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value?.username}`;
+  });
 
-const roleText = computed(() => {
-  return user.value?.role === 'admin' ? '管理员' : '普通用户'
-})
+  const roleText = computed(() => {
+    return user.value?.role === "admin" ? "管理员" : "普通用户";
+  });
 
-const registrationDays = computed(() => {
-  if (!user.value?.created_at) return 1
-  const createdAt = new Date(user.value.created_at).getTime()
-  const diff = Math.ceil((Date.now() - createdAt) / 86400000)
-  return Math.max(diff, 1)
-})
+  const registrationDays = computed(() => {
+    if (!user.value?.createdAt) return 1;
+    const createdAt = new Date(user.value.createdAt).getTime();
+    const diff = Math.ceil((Date.now() - createdAt) / 86400000);
+    return Math.max(diff, 1);
+  });
 
-async function loadProfile() {
-  try {
-    const res = await getProfile()
-    if (res.data.success) {
-      const data = res.data.data
-      myComments.value = (data.comments || []).map(c => ({
-        id: c.id,
-        articleId: c.article_slug || c.article_id,
-        articleTitle: c.article_title,
-        content: c.content,
-        createdAt: c.created_at,
-      }))
+  async function loadProfile() {
+    try {
+      const res = await getProfile();
+      if (res.data.success) {
+        const data = res.data.data;
+        myComments.value = (data.comments || []).map((c) => ({
+          id: c.id,
+          articleId: c.article_slug || c.article_id,
+          articleTitle: c.article_title,
+          content: c.content,
+          createdAt: c.created_at,
+        }));
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
-}
 
-const handleLogout = () => {
-  ElMessageBox.confirm("确定要退出登录吗？", "退出确认", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  })
-    .then(() => {
-      logout()
-      ElMessage.success('已退出登录')
-      router.push('/login')
+  const handleLogout = () => {
+    ElMessageBox.confirm("确定要退出登录吗？", "退出确认", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
     })
-    .catch(() => {})
-}
+      .then(() => {
+        logout();
+        ElMessage.success("已退出登录");
+        router.push("/login");
+      })
+      .catch(() => {});
+  };
 
-onMounted(() => {
-  if (!user.value) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
-  loadProfile()
-})
+  onMounted(() => {
+    if (!user.value) {
+      ElMessage.warning("请先登录");
+      router.push("/login");
+      return;
+    }
+    loadProfile();
+  });
 </script>
 
 <style scoped lang="scss">
-.profile {
-  padding: var(--blog-spacing-md) 0;
+  .profile {
+    padding: var(--blog-spacing-md) 0;
 
-  .profile-container {
-    display: grid;
-    gap: var(--blog-spacing-lg);
-
-    @media (min-width: 768px) {
-      grid-template-columns: 1fr 2fr;
-    }
-  }
-
-  .user-info-card {
-    .user-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: var(--blog-spacing-lg);
-
-      .user-avatar {
-        margin-right: var(--blog-spacing-md);
-      }
-
-      .user-details {
-        h2 {
-          margin: 0 0 var(--blog-spacing-xs);
-          font-size: 24px;
-          font-weight: 600;
-        }
-
-        .user-meta {
-          display: flex;
-          gap: var(--blog-spacing-md);
-          color: var(--blog-text-secondary);
-
-          .user-role {
-            color: var(--blog-primary-color);
-            font-weight: 500;
-          }
-        }
-      }
-    }
-
-    .user-stats {
+    .profile-container {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--blog-spacing-md);
-      margin-bottom: var(--blog-spacing-lg);
+      gap: var(--blog-spacing-lg);
 
-      .stat-item {
+      @media (min-width: 768px) {
+        grid-template-columns: 1fr 2fr;
+      }
+    }
+
+    .user-info-card {
+      .user-header {
         display: flex;
         align-items: center;
-        padding: var(--blog-spacing-md);
-        background-color: var(--blog-bg-gray);
-        border-radius: var(--blog-border-radius);
-        text-align: left;
+        margin-bottom: var(--blog-spacing-lg);
 
-        .stat-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 32px;
-          height: 32px;
-          margin-right: var(--blog-spacing-sm);
-          border-radius: 50%;
-          background-color: var(--blog-primary-light);
-          color: var(--blog-primary-color);
+        .user-avatar {
+          margin-right: var(--blog-spacing-md);
+        }
 
-          .el-icon {
-            font-size: 16px;
+        .user-details {
+          h2 {
+            margin: 0 0 var(--blog-spacing-xs);
+            font-size: 24px;
+            font-weight: 600;
+          }
+
+          .user-meta {
+            display: flex;
+            gap: var(--blog-spacing-md);
+            color: var(--blog-text-secondary);
+
+            .user-role {
+              color: var(--blog-primary-color);
+              font-weight: 500;
+            }
           }
         }
+      }
 
-        .stat-content {
-          flex: 1;
-        }
+      .user-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--blog-spacing-md);
+        margin-bottom: var(--blog-spacing-lg);
 
-        .stat-value {
-          font-size: 24px;
-          font-weight: 600;
-          color: var(--blog-primary-color);
-        }
+        .stat-item {
+          display: flex;
+          align-items: center;
+          padding: var(--blog-spacing-md);
+          background-color: var(--blog-bg-gray);
+          border-radius: var(--blog-border-radius);
+          text-align: left;
 
-        .stat-label {
-          font-size: 12px;
-          color: var(--blog-text-secondary);
-          margin-top: var(--blog-spacing-xs);
+          .stat-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            margin-right: var(--blog-spacing-sm);
+            border-radius: 50%;
+            background-color: var(--blog-primary-light);
+            color: var(--blog-primary-color);
+
+            .el-icon {
+              font-size: 16px;
+            }
+          }
+
+          .stat-content {
+            flex: 1;
+          }
+
+          .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--blog-primary-color);
+          }
+
+          .stat-label {
+            font-size: 12px;
+            color: var(--blog-text-secondary);
+            margin-top: var(--blog-spacing-xs);
+          }
         }
+      }
+
+      .user-actions {
+        text-align: center;
       }
     }
 
-    .user-actions {
-      text-align: center;
-    }
-  }
-
-  .my-comments-card {
-    h3 {
-      margin-bottom: var(--blog-spacing-md);
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: var(--blog-spacing-xl) 0;
-
-      p {
+    .my-comments-card {
+      h3 {
         margin-bottom: var(--blog-spacing-md);
-        color: var(--blog-text-secondary);
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: var(--blog-spacing-xl) 0;
+
+        p {
+          margin-bottom: var(--blog-spacing-md);
+          color: var(--blog-text-secondary);
+        }
       }
     }
   }
-}
 </style>
