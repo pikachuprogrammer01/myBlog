@@ -114,7 +114,7 @@ const loading = ref(false)
 
 const comments = ref([])
 const page = ref(1)
-const limit = ref(10)
+const limit = ref(8)
 const total = ref(0)
 const totalPages = ref(0)
 

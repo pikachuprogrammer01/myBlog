@@ -92,7 +92,7 @@ const saving = ref(false);
 const dialogVisible = ref(false);
 const editingId = ref(null);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(8);
 const form = ref({
   name: "",
   url: "",

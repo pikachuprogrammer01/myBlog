@@ -107,7 +107,7 @@ const resettingId = ref(null);
 const dialogVisible = ref(false);
 const editingId = ref(null);
 const page = ref(1);
-const limit = ref(10);
+const limit = ref(8);
 const total = ref(0);
 const totalPages = ref(0);
 

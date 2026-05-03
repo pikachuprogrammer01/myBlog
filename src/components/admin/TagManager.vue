@@ -82,7 +82,7 @@ const adding = ref(false);
 const editingId = ref(null);
 const editName = ref("");
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(8);
 
 const filteredTags = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();

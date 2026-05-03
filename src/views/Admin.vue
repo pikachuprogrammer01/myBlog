@@ -66,7 +66,7 @@
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
 
-  import { getAdminArticles, getAdminStats, getAdminArticleStats, getAdminArticleList, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
+  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, getAdminArticleList, getAdminUsers, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
   import { getCache, setCache, removeCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
@@ -82,6 +82,7 @@ import ToolManager from "@/components/admin/ToolManager.vue";
 import InterviewManager from "@/components/admin/InterviewManager.vue";
 import UserManager from "@/components/admin/UserManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
+  import { getAdminInterviewQuestions } from "@/api/services/interviewService";
 
   const router = useRouter();
   const { currentUser, logout } = useAuth();
@@ -341,10 +342,11 @@ const userManagerRef = ref(null);
         utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章数据");
       } else if (activeTab.value === "comments") {
         fileName = `blog-comments-${dateStr}.xlsx`;
-        const data = (commentManagerRef.value?.comments || []).map((c) => ({
-          用户: c.username || "-",
+        const commentsRes = await getAdminComments({ limit: 10000 });
+        const data = (commentsRes.data?.data || []).map((c) => ({
+          用户: c.username || c.user_id || "-",
           评论内容: c.content || "-",
-          所属文章: c.articleTitle || "-",
+          所属文章: c.article_title || "-",
           时间: c.created_at
             ? new Date(c.created_at).toLocaleString("zh-CN")
             : "-",
@@ -390,7 +392,8 @@ const userManagerRef = ref(null);
         utils.book_append_sheet(wb, utils.json_to_sheet(toolData), "工具管理");
       } else if (activeTab.value === "interview") {
         fileName = `blog-interview-${dateStr}.xlsx`;
-        const interviewData = (interviewManagerRef.value?.questions || []).map((q) => ({
+        const interviewRes = await getAdminInterviewQuestions({ limit: 10000 });
+        const interviewData = (interviewRes.data?.data || []).map((q) => ({
           题目标题: q.title,
           分类: q.category,
           难度: q.difficulty === "easy" ? "简单" : q.difficulty === "medium" ? "中等" : "困难",
@@ -404,7 +407,8 @@ const userManagerRef = ref(null);
         utils.book_append_sheet(wb, utils.json_to_sheet(interviewData), "题库管理");
       } else if (activeTab.value === "users") {
         fileName = `blog-users-${dateStr}.xlsx`;
-        const userData = (userManagerRef.value?.users || []).map((u) => ({
+        const usersRes = await getAdminUsers({ limit: 10000 });
+        const userData = (usersRes.data?.data || []).map((u) => ({
           用户名: u.username,
           角色: u.role === "admin" ? "管理员" : "普通用户",
           注册时间: u.created_at
