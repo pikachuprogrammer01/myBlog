@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { requireAuthMw } = require('../middleware/auth');
 
 let tableReady = false;
+let commentColumnReady = false;
 let seeded = false;
 
 async function ensureTable() {
@@ -31,6 +33,22 @@ async function ensureTable() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
   tableReady = true;
+}
+
+async function ensureCommentColumns() {
+  if (commentColumnReady) return;
+  try {
+    await pool.execute(`ALTER TABLE comments ADD COLUMN interview_question_id INT DEFAULT NULL`);
+  } catch (e) {
+    // Column already exists
+    if (e.code !== 'ER_DUP_FIELDNAME') throw e;
+  }
+  try {
+    await pool.execute(`ALTER TABLE comments MODIFY COLUMN article_id INT DEFAULT NULL`);
+  } catch (e) {
+    // Already nullable
+  }
+  commentColumnReady = true;
 }
 
 const CATEGORY_LABELS = {
@@ -260,6 +278,89 @@ router.get('/questions/:id', async (req, res) => {
   } catch (error) {
     console.error('[Interview] 获取题目详情失败:', error);
     return res.status(500).json({ success: false, message: '获取题目详情失败' });
+  }
+});
+
+// GET /api/interview/questions/:id/comments
+router.get('/questions/:id/comments', async (req, res) => {
+  try {
+    await ensureTable();
+    await ensureCommentColumns();
+
+    const id = parseInt(req.params.id);
+    const [questions] = await pool.execute('SELECT id FROM interview_questions WHERE id = ?', [id]);
+    if (questions.length === 0) {
+      return res.status(404).json({ success: false, message: '题目不存在' });
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT c.id, c.interview_question_id, c.parent_id, c.content, c.is_sticky, c.is_deleted,
+              c.created_at, c.updated_at,
+              u.id as user_id, u.username, u.role as user_role, u.avatar_url,
+              (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id) as likes
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.interview_question_id = ? AND c.is_deleted = 0
+       ORDER BY c.is_sticky DESC, c.created_at DESC`,
+      [id]
+    );
+
+    return res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error('[Interview] 获取评论失败:', error);
+    return res.status(500).json({ success: false, message: '获取评论失败' });
+  }
+});
+
+// POST /api/interview/questions/:id/comments
+router.post('/questions/:id/comments', requireAuthMw, async (req, res) => {
+  const questionId = parseInt(req.params.id);
+  const user = req.user;
+  const { content, parentId } = req.body || {};
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ success: false, message: '评论内容不能为空' });
+  }
+
+  try {
+    await ensureTable();
+    await ensureCommentColumns();
+
+    const [questions] = await pool.execute('SELECT id FROM interview_questions WHERE id = ?', [questionId]);
+    if (questions.length === 0) {
+      return res.status(404).json({ success: false, message: '题目不存在' });
+    }
+
+    if (parentId) {
+      const [parents] = await pool.execute(
+        'SELECT id FROM comments WHERE id = ? AND interview_question_id = ? AND is_deleted = 0',
+        [parentId, questionId]
+      );
+      if (parents.length === 0) {
+        return res.status(400).json({ success: false, message: '父评论不存在' });
+      }
+    }
+
+    const [result] = await pool.execute(
+      'INSERT INTO comments (interview_question_id, user_id, parent_id, content) VALUES (?, ?, ?, ?)',
+      [questionId, user.id, parentId || null, content.trim()]
+    );
+
+    const [newComment] = await pool.execute(
+      `SELECT c.id, c.interview_question_id, c.parent_id, c.content, c.is_sticky, c.is_deleted,
+              c.created_at, c.updated_at,
+              u.id as user_id, u.username, u.role as user_role, u.avatar_url,
+              0 as likes
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.id = ?`,
+      [result.insertId]
+    );
+
+    return res.status(201).json({ success: true, data: newComment[0] });
+  } catch (error) {
+    console.error('[Interview] 添加评论失败:', error);
+    return res.status(500).json({ success: false, message: '评论发表失败' });
   }
 });
 

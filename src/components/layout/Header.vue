@@ -22,22 +22,26 @@
         <router-link to="/tags" class="nav-link">
           <el-icon><PriceTag /></el-icon> 标签
         </router-link>
-        <router-link to="/tools" class="nav-link">
-          <el-icon><Tools /></el-icon>
-          实用工具
-        </router-link>
-        <router-link to="/interview" class="nav-link">
-          <el-icon><Notebook /></el-icon>
-          面试题库
-        </router-link>
-        <router-link to="/bookmarks" class="nav-link">
-          <el-icon><CollectionTag /></el-icon>
-          收藏
-        </router-link>
-        <router-link to="/about" class="nav-link">
-          <el-icon><User /></el-icon>
-          关于我
-        </router-link>
+
+        <el-dropdown trigger="hover" @command="handleMoreCommand">
+          <span class="nav-link more-link">
+            <el-icon><MoreFilled /></el-icon> 更多
+            <el-icon><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="tools" :icon="Tools">
+                实用工具
+              </el-dropdown-item>
+              <el-dropdown-item command="interview" :icon="Notebook">
+                面试题库
+              </el-dropdown-item>
+              <el-dropdown-item command="about" :icon="User">
+                关于我
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </nav>
 
       <div class="header-right">
@@ -78,6 +82,9 @@
                   </div>
                   <el-dropdown-item command="profile" :icon="User"
                     >个人中心</el-dropdown-item
+                  >
+                  <el-dropdown-item command="bookmarks" :icon="CollectionTag"
+                    >我的收藏</el-dropdown-item
                   >
                   <el-dropdown-item v-if="isAdmin" command="admin" :icon="Tools"
                     >管理后台</el-dropdown-item
@@ -122,9 +129,9 @@
     ArrowDown,
     SwitchButton,
     Monitor,
-    Reading,
     CollectionTag,
     Notebook,
+    MoreFilled,
   } from "@element-plus/icons-vue";
   import { useAuth } from "@/composables/useAuth";
 
@@ -161,11 +168,29 @@
       case "profile":
         router.push("/profile");
         break;
+      case "bookmarks":
+        router.push("/bookmarks");
+        break;
       case "admin":
         router.push("/admin");
         break;
       case "logout":
         handleLogout();
+        break;
+    }
+  };
+
+  // 更多菜单命令处理
+  const handleMoreCommand = (command) => {
+    switch (command) {
+      case "tools":
+        router.push("/tools");
+        break;
+      case "interview":
+        router.push("/interview");
+        break;
+      case "about":
+        router.push("/about");
         break;
     }
   };
@@ -286,6 +311,14 @@
 
         .el-icon {
           font-size: 17px;
+        }
+      }
+
+      .more-link {
+        cursor: pointer;
+
+        .el-icon:last-child {
+          font-size: 12px;
         }
       }
     }

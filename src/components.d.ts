@@ -65,6 +65,7 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     Footer: typeof import('./components/layout/Footer.vue')['default']
     Header: typeof import('./components/layout/Header.vue')['default']
+    InterviewManager: typeof import('./components/admin/InterviewManager.vue')['default']
     Main: typeof import('./components/layout/Main.vue')['default']
     MarkdownRenderer: typeof import('./components/blog/MarkdownRenderer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

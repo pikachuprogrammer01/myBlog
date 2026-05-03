@@ -13,6 +13,18 @@ export function getInterviewQuestion(id) {
   return client.get(`/api/interview/questions/${id}`);
 }
 
+// Interview comments
+export function getInterviewQuestionComments(id) {
+  return client.get(`/api/interview/questions/${id}/comments`);
+}
+
+export function postInterviewQuestionComment(id, { content, parentId }) {
+  return client.post(`/api/interview/questions/${id}/comments`, {
+    content,
+    parentId: parentId || undefined,
+  });
+}
+
 // Admin
 export function getAdminInterviewQuestions(params = {}) {
   return client.get('/api/admin/interview', { params });
