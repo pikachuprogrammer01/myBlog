@@ -73,7 +73,7 @@ async function uploadImage(folder, buffer, contentType, originalName) {
  * @param {string} folder - OSS 目录
  * @returns {Promise<string|null>} OSS URL 或 null（失败时返回 null，保留原始 URL）
  */
-async function mirrorImage(imageUrl, folder = 'blog/images') {
+async function mirrorImage(imageUrl, folder = 'images') {
   if (!isConfigured()) return null;
 
   const controller = new AbortController();

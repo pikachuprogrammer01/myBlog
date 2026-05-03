@@ -8,9 +8,19 @@
       <!-- 用户信息卡片 -->
       <div class="blog-card user-info-card">
         <div class="user-header">
-          <div class="user-avatar">
+          <div class="user-avatar" @click="triggerUpload" @mouseenter="hoverAvatar = true" @mouseleave="hoverAvatar = false">
             <el-avatar :size="80" :src="userAvatar" />
+            <div class="avatar-overlay" :class="{ visible: hoverAvatar }">
+              <el-icon :size="24"><Plus /></el-icon>
+            </div>
           </div>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            class="avatar-file-input"
+            @change="onFileChange"
+          />
           <div class="user-details">
             <h2>{{ user?.username }}</h2>
             <div class="user-meta">
@@ -93,16 +103,54 @@
   import { useArticles } from "@/composables/useArticles";
   import { formatDate } from "@/utils/date";
   import { getProfile } from "@/api/services/authService";
-  import { User, ChatDotRound, Calendar } from "@element-plus/icons-vue";
+  import { User, ChatDotRound, Calendar, Plus } from "@element-plus/icons-vue";
 
   const router = useRouter();
-  const { currentUser: user, logout } = useAuth();
+  const { currentUser: user, logout, updateAvatar, removeAvatar } = useAuth();
   const { getArticle } = useArticles();
   const myComments = ref([]);
+  const hoverAvatar = ref(false);
+  const fileInputRef = ref(null);
+  const uploadingAvatar = ref(false);
 
   const userAvatar = computed(() => {
+    if (user.value?.avatarUrl) return user.value.avatarUrl;
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value?.username}`;
   });
+
+  function triggerUpload() {
+    fileInputRef.value?.click();
+  }
+
+  async function onFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      ElMessage.warning("图片大小不能超过 2MB");
+      fileInputRef.value.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      uploadingAvatar.value = true;
+      try {
+        const res = await updateAvatar(reader.result);
+        if (res.success) {
+          ElMessage.success("头像已更新");
+        } else {
+          ElMessage.error(res.message || "上传失败");
+        }
+      } catch {
+        ElMessage.error("头像上传失败");
+      } finally {
+        uploadingAvatar.value = false;
+        fileInputRef.value.value = "";
+      }
+    };
+    reader.readAsDataURL(file);
+  }
 
   const roleText = computed(() => {
     return user.value?.role === "admin" ? "管理员" : "普通用户";
@@ -177,7 +225,30 @@
         margin-bottom: var(--blog-spacing-lg);
 
         .user-avatar {
+          position: relative;
+          cursor: pointer;
           margin-right: var(--blog-spacing-md);
+
+          .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.25s;
+
+            &.visible {
+              opacity: 1;
+            }
+          }
+        }
+
+        .avatar-file-input {
+          display: none;
         }
 
         .user-details {

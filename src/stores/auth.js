@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
-import { login as loginApi, register as registerApi, getProfile } from '@/api/services/authService';
+import { login as loginApi, register as registerApi, getProfile, uploadAvatar, deleteAvatar } from '@/api/services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
   const savedUser = (() => {
@@ -94,6 +94,24 @@ export const useAuthStore = defineStore('auth', () => {
     clearSession();
   }
 
+  async function updateAvatarUrl(imageBase64) {
+    const res = await uploadAvatar(imageBase64);
+    if (res.data.success) {
+      user.value = { ...user.value, avatarUrl: res.data.data.avatarUrl };
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user.value));
+    }
+    return res.data;
+  }
+
+  async function removeAvatarUrl() {
+    const res = await deleteAvatar();
+    if (res.data.success) {
+      user.value = { ...user.value, avatarUrl: null };
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user.value));
+    }
+    return res.data;
+  }
+
   return {
     user,
     token,
@@ -104,5 +122,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     restoreSession,
     logout,
+    updateAvatarUrl,
+    removeAvatarUrl,
   };
 });

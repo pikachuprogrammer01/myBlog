@@ -83,7 +83,7 @@ async function mirrorImagesToOss(mdContent) {
   for (let i = 0; i < urls.length; i += 5) {
     const batch = urls.slice(i, i + 5);
     const results = await Promise.allSettled(
-      batch.map((url) => mirrorImage(url, 'blog/images'))
+      batch.map((url) => mirrorImage(url, 'images'))
     );
     batch.forEach((url, idx) => {
       if (results[idx].status === 'fulfilled' && results[idx].value) {
@@ -170,7 +170,7 @@ async function uploadCoverToOss(base64DataUri) {
     const buffer = Buffer.from(match[2], 'base64');
     const contentType = match[1];
     const ext = contentType.split('/')[1] || 'png';
-    return await uploadImage('blog/covers', buffer, contentType, `cover.${ext}`);
+    return await uploadImage('cover', buffer, contentType, `cover.${ext}`);
   } catch {
     return null;
   }

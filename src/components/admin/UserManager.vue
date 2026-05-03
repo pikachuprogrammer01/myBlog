@@ -18,6 +18,11 @@
 
     <el-table :data="users" stripe v-loading="loading" class="user-table">
       <el-table-column prop="id" label="ID" width="60" align="center" />
+      <el-table-column label="头像" width="60" align="center">
+        <template #default="{ row }">
+          <el-avatar :size="32" :src="getUserAvatar(row.username, row.avatar_url)" />
+        </template>
+      </el-table-column>
       <el-table-column prop="username" label="用户名" min-width="140" />
       <el-table-column prop="role" label="角色" width="100" align="center">
         <template #default="{ row }">
@@ -133,6 +138,11 @@ function formatDate(dateStr) {
   const h = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${y}-${m}-${day} ${h}:${min}`;
+}
+
+function getUserAvatar(username, avatarUrl) {
+  if (avatarUrl) return avatarUrl;
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
 }
 
 async function loadUsers() {

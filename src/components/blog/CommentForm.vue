@@ -269,6 +269,7 @@
   // 用户头像
   const userAvatar = computed(() => {
     if (!currentUser.value) return "";
+    if (currentUser.value.avatarUrl) return currentUser.value.avatarUrl;
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.value.username}`;
   });
 

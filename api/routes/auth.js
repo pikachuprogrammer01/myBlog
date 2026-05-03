@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { signToken, requireAuthMw } = require('../middleware/auth');
 const pool = require('../db');
+const { isConfigured: isOssConfigured, uploadImage } = require('../utils/oss');
 
 const SALT_ROUNDS = 10;
 
@@ -116,7 +117,11 @@ router.get('/profile', requireAuthMw, async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        ...user,
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        avatarUrl: user.avatar_url,
+        createdAt: user.created_at,
         commentCount: commentCount[0].count,
         comments: myComments,
       },
@@ -124,6 +129,63 @@ router.get('/profile', requireAuthMw, async (req, res) => {
   } catch (error) {
     console.error('获取用户信息失败:', error);
     return res.status(500).json({ success: false, message: '获取用户信息失败' });
+  }
+});
+
+// PUT /avatar — upload avatar (base64 image)
+router.put('/avatar', requireAuthMw, async (req, res) => {
+  const user = req.user;
+  const { image } = req.body || {};
+
+  if (!image || typeof image !== 'string') {
+    return res.status(400).json({ success: false, message: '请选择图片' });
+  }
+
+  const matches = image.match(/^data:image\/(png|jpe?g|gif|webp);base64,(.+)$/);
+  if (!matches) {
+    return res.status(400).json({ success: false, message: '图片格式不支持，仅支持 PNG/JPG/GIF/WebP' });
+  }
+
+  const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+  const base64Data = matches[2];
+  const buffer = Buffer.from(base64Data, 'base64');
+
+  if (buffer.length > 2 * 1024 * 1024) {
+    return res.status(400).json({ success: false, message: '图片大小不能超过 2MB' });
+  }
+
+  try {
+    let avatarUrl = null;
+
+    if (isOssConfigured()) {
+      const originalName = `avatar.${ext}`;
+      avatarUrl = await uploadImage('avatar', buffer, `image/${ext}`, originalName);
+      if (!avatarUrl) {
+        return res.status(500).json({ success: false, message: '头像上传失败' });
+      }
+    } else {
+      avatarUrl = `data:image/${ext};base64,${base64Data}`;
+    }
+
+    await pool.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, user.id]);
+
+    return res.status(200).json({ success: true, data: { avatarUrl } });
+  } catch (error) {
+    console.error('头像上传失败:', error);
+    return res.status(500).json({ success: false, message: '头像上传失败' });
+  }
+});
+
+// DELETE /avatar — remove avatar
+router.delete('/avatar', requireAuthMw, async (req, res) => {
+  const user = req.user;
+
+  try {
+    await pool.execute('UPDATE users SET avatar_url = NULL WHERE id = ?', [user.id]);
+    return res.status(200).json({ success: true, message: '头像已移除' });
+  } catch (error) {
+    console.error('头像移除失败:', error);
+    return res.status(500).json({ success: false, message: '头像移除失败' });
   }
 });
 

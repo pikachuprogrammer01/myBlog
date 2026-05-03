@@ -133,9 +133,10 @@
 
   const searchQuery = ref("");
 
-  // 用户头像（模拟）
+  // 用户头像
   const userAvatar = computed(() => {
     if (!currentUser.value) return "";
+    if (currentUser.value.avatarUrl) return currentUser.value.avatarUrl;
     return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${currentUser.value.username}`;
   });
 

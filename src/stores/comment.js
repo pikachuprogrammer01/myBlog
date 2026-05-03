@@ -23,6 +23,7 @@ function normalizeComment(c) {
     likes: c.likes || 0,
     liked: false, // Will be set if user is authenticated
     likedBy: [],
+    avatarUrl: c.avatar_url || null,
   };
 }
 

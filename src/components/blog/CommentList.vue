@@ -61,7 +61,7 @@
           <!-- 评论头部 -->
           <div class="comment-header">
             <div class="comment-user">
-              <el-avatar :size="36" :src="getUserAvatar(comment.username)" />
+              <el-avatar :size="36" :src="getUserAvatar(comment.username, comment.avatarUrl)" />
               <div class="user-info">
                 <div class="username">{{ comment.username }}</div>
                 <div class="comment-meta">
@@ -369,7 +369,8 @@ const decorateComment = (comment) => {
 }
 
 // 获取用户头像
-const getUserAvatar = (username) => {
+const getUserAvatar = (username, avatarUrl) => {
+  if (avatarUrl) return avatarUrl
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
 }
 

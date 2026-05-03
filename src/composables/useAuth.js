@@ -24,6 +24,14 @@ export function useAuth() {
     return authStore.restoreSession();
   }
 
+  function updateAvatar(imageBase64) {
+    return authStore.updateAvatarUrl(imageBase64);
+  }
+
+  function removeAvatar() {
+    return authStore.removeAvatarUrl();
+  }
+
   return {
     currentUser,
     isAuthenticated,
@@ -32,5 +40,7 @@ export function useAuth() {
     register,
     logout,
     restoreSession,
+    updateAvatar,
+    removeAvatar,
   };
 }
