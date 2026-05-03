@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
+import { getStorage, removeStorage } from '@/utils/storage';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
@@ -11,7 +12,7 @@ const client = axios.create({
 
 // Attach JWT token on each request
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+  const token = getStorage(STORAGE_KEYS.AUTH_TOKEN);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,8 +24,8 @@ client.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+      removeStorage(STORAGE_KEYS.AUTH_TOKEN);
+      removeStorage(STORAGE_KEYS.CURRENT_USER);
       // Use SPA navigation instead of hard reload to avoid flash
       const path = window.location.pathname;
       if (!path.includes('/login') && !path.includes('/register')) {

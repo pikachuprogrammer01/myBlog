@@ -4,7 +4,12 @@
 export function getStorage(key, defaultValue = null) {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    if (item == null) return defaultValue
+    try {
+      return JSON.parse(item)
+    } catch {
+      return item
+    }
   } catch (error) {
     console.error(`读取localStorage失败 (key: ${key}):`, error)
     return defaultValue

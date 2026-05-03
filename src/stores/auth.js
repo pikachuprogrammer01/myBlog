@@ -1,19 +1,13 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
+import { getStorage, setStorage, removeStorage } from '@/utils/storage';
 import { login as loginApi, register as registerApi, getProfile, uploadAvatar, deleteAvatar } from '@/api/services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
-  const savedUser = (() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  })();
+  const savedUser = getStorage(STORAGE_KEYS.CURRENT_USER);
   const user = ref(savedUser);
-  const token = ref(localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || null);
+  const token = ref(getStorage(STORAGE_KEYS.AUTH_TOKEN, null));
   const loading = ref(false);
 
   const isAuthenticated = computed(() => !!token.value && !!user.value);
@@ -22,15 +16,15 @@ export const useAuthStore = defineStore('auth', () => {
   function persistSession(authUser, authToken) {
     token.value = authToken;
     user.value = authUser;
-    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, authToken);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(authUser));
+    setStorage(STORAGE_KEYS.AUTH_TOKEN, authToken);
+    setStorage(STORAGE_KEYS.CURRENT_USER, authUser);
   }
 
   function clearSession() {
     token.value = null;
     user.value = null;
-    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    removeStorage(STORAGE_KEYS.AUTH_TOKEN);
+    removeStorage(STORAGE_KEYS.CURRENT_USER);
   }
 
   // 登录 — 调用后端 API
@@ -77,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await getProfile();
       if (res.data.success) {
         user.value = res.data.data;
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(res.data.data));
+        setStorage(STORAGE_KEYS.CURRENT_USER, res.data.data);
         return true;
       }
       clearSession();
@@ -97,8 +91,17 @@ export const useAuthStore = defineStore('auth', () => {
   async function updateAvatarUrl(imageBase64) {
     const res = await uploadAvatar(imageBase64);
     if (res.data.success) {
-      user.value = { ...user.value, avatarUrl: res.data.data.avatarUrl };
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user.value));
+      // Re-fetch profile to ensure local state matches server
+      try {
+        const profileRes = await getProfile();
+        if (profileRes.data.success) {
+          user.value = profileRes.data.data;
+          setStorage(STORAGE_KEYS.CURRENT_USER, profileRes.data.data);
+        }
+      } catch {
+        user.value = { ...user.value, avatarUrl: res.data.data.avatarUrl };
+        setStorage(STORAGE_KEYS.CURRENT_USER, user.value);
+      }
     }
     return res.data;
   }
@@ -106,8 +109,16 @@ export const useAuthStore = defineStore('auth', () => {
   async function removeAvatarUrl() {
     const res = await deleteAvatar();
     if (res.data.success) {
-      user.value = { ...user.value, avatarUrl: null };
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user.value));
+      try {
+        const profileRes = await getProfile();
+        if (profileRes.data.success) {
+          user.value = profileRes.data.data;
+          setStorage(STORAGE_KEYS.CURRENT_USER, profileRes.data.data);
+        }
+      } catch {
+        user.value = { ...user.value, avatarUrl: null };
+        setStorage(STORAGE_KEYS.CURRENT_USER, user.value);
+      }
     }
     return res.data;
   }

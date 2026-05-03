@@ -1,12 +1,14 @@
+import { getStorage, setStorage, removeStorage } from './storage';
+
 const DEFAULT_TTL = 5 * 60 * 1000
 
 export function getCache(key, ttl = DEFAULT_TTL) {
   try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return null
-    const { data, timestamp } = JSON.parse(raw)
+    const cached = getStorage(key)
+    if (!cached) return null
+    const { data, timestamp } = cached
     if (Date.now() - timestamp > ttl) {
-      localStorage.removeItem(key)
+      removeStorage(key)
       return null
     }
     return data
@@ -16,13 +18,9 @@ export function getCache(key, ttl = DEFAULT_TTL) {
 }
 
 export function setCache(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }))
-  } catch {
-    // localStorage full or unavailable
-  }
+  setStorage(key, { data, timestamp: Date.now() })
 }
 
 export function removeCache(key) {
-  localStorage.removeItem(key)
+  removeStorage(key)
 }
