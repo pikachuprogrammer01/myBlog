@@ -8,7 +8,7 @@
       非管理员，请使用管理员账号登录后再访问
     </div>
 
-    <div v-else class="admin-dashboard">
+    <div v-else class="admin-dashboard" v-loading="adminLoading">
       <el-tabs v-model="activeTab" type="border-card">
         <el-tab-pane label="数据概览" name="overview">
           <AdminStats :stats="stats" />
@@ -63,7 +63,7 @@
   import { Setting } from "@element-plus/icons-vue";
 
   import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, getAdminArticleList, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
-  import { getCache, setCache } from "@/utils/cache";
+  import { getCache, setCache, removeCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
   import { useComments } from "@/composables/useComments";
@@ -144,41 +144,50 @@ const userManagerRef = ref(null);
     totalViews: 0,
   });
 
-  const loadData = async () => {
+  const adminLoading = ref(false);
+
+  const loadData = async (skipCache = false) => {
     if (!isAdmin.value) return;
 
-    // Step 1: Show article store data immediately
-    const localArticles = getArticles();
-    articles.value = localArticles;
-
-    // Step 2: Show cached data from previous admin visit
-    const cachedStats = getCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
-    const cachedComments = getCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
-    const cachedArticleStats = getCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
-
-    if (cachedStats) {
-      stats.value = cachedStats;
+    if (skipCache) {
+      removeCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
+      removeCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
+      removeCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
+      adminLoading.value = true;
     } else {
-      stats.value = {
-        totalArticles: localArticles.length,
-        totalComments: 0,
-        totalUsers: 0,
-        totalViews: localArticles.reduce(
-          (sum, a) => sum + (a.view_count || a.views || 0),
-          0,
-        ),
-      };
+      // Step 1: Show article store data immediately
+      const localArticles = getArticles();
+      articles.value = localArticles;
+
+      // Step 2: Show cached data from previous admin visit
+      const cachedStats = getCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
+      const cachedComments = getCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
+      const cachedArticleStats = getCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
+
+      if (cachedStats) {
+        stats.value = cachedStats;
+      } else {
+        stats.value = {
+          totalArticles: localArticles.length,
+          totalComments: 0,
+          totalUsers: 0,
+          totalViews: localArticles.reduce(
+            (sum, a) => sum + (a.view_count || a.views || 0),
+            0,
+          ),
+        };
+      }
+
+      if (cachedComments) {
+        comments.value = cachedComments;
+      }
+
+      if (cachedArticleStats) {
+        articleStats.value = cachedArticleStats;
+      }
     }
 
-    if (cachedComments) {
-      comments.value = cachedComments;
-    }
-
-    if (cachedArticleStats) {
-      articleStats.value = cachedArticleStats;
-    }
-
-    // Step 3: Refresh from API in background
+    // Step 3: Refresh from API
     try {
       const [articlesRes, statsRes, commentsRes, articleStatsRes] = await Promise.all([
         getAdminArticles(),
@@ -219,10 +228,14 @@ const userManagerRef = ref(null);
         "API 加载管理数据失败，使用缓存数据:",
         error?.message || error,
       );
+    } finally {
+      if (skipCache) {
+        adminLoading.value = false;
+      }
     }
   };
 
-  provide('refreshAdminData', loadData);
+  provide('refreshAdminData', () => loadData(true));
 
   const deleteComment = (commentId) => {
     ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {

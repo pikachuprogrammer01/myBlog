@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getArticles, getCategories, toggleLike, getLikeStatus, toggleBookmark, getBookmarkStatus, getBookmarks } from '@/api/services/articleService';
 import articlesData from '@/data/articles.json';
-import { getCache, setCache } from '@/utils/cache';
+import { getCache, setCache, removeCache } from '@/utils/cache';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
 
 export const useArticleStore = defineStore('article', () => {
@@ -196,6 +196,9 @@ export const useArticleStore = defineStore('article', () => {
 
   function invalidateCache() {
     lastFetched.value = 0;
+    lastCategoriesFetched.value = 0;
+    removeCache(STORAGE_KEYS.CACHED_ARTICLES);
+    removeCache(STORAGE_KEYS.CACHED_CATEGORIES);
   }
 
   // Like — via API
