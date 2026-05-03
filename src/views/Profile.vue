@@ -8,10 +8,11 @@
       <!-- 用户信息卡片 -->
       <div class="blog-card user-info-card">
         <div class="user-header">
-          <div class="user-avatar" @click="triggerUpload" @mouseenter="hoverAvatar = true" @mouseleave="hoverAvatar = false">
+          <div class="user-avatar" :class="{ 'is-uploading': uploadingAvatar }" @click="triggerUpload" @mouseenter="hoverAvatar = true" @mouseleave="hoverAvatar = false">
             <el-avatar :size="80" :src="userAvatar" />
-            <div class="avatar-overlay" :class="{ visible: hoverAvatar }">
-              <el-icon :size="24"><Plus /></el-icon>
+            <div class="avatar-overlay" :class="{ visible: hoverAvatar || uploadingAvatar }">
+              <el-icon v-if="uploadingAvatar" :size="24" class="is-loading"><Loading /></el-icon>
+              <el-icon v-else :size="24"><Plus /></el-icon>
             </div>
           </div>
           <input
@@ -103,7 +104,7 @@
   import { useArticles } from "@/composables/useArticles";
   import { formatDate } from "@/utils/date";
   import { getProfile } from "@/api/services/authService";
-  import { User, ChatDotRound, Calendar, Plus } from "@element-plus/icons-vue";
+  import { User, ChatDotRound, Calendar, Plus, Loading } from "@element-plus/icons-vue";
 
   const router = useRouter();
   const { currentUser: user, logout, updateAvatar, removeAvatar } = useAuth();
@@ -119,6 +120,7 @@
   });
 
   function triggerUpload() {
+    if (uploadingAvatar.value) return;
     fileInputRef.value?.click();
   }
 
@@ -244,7 +246,24 @@
             &.visible {
               opacity: 1;
             }
+
+            .is-loading {
+              animation: avatar-spin 1s linear infinite;
+            }
           }
+        }
+
+        &.is-uploading {
+          cursor: wait;
+
+          .el-avatar img {
+            opacity: 0.6;
+          }
+        }
+
+        @keyframes avatar-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         .avatar-file-input {
