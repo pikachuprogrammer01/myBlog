@@ -244,82 +244,98 @@
     }
   };
 
-  // 计算阅读进度
-  const updateReadingProgress = () => {
-    // 获取整个页面的滚动高度
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    // 获取页面的总可滚动高度
-    const docHeight = document.documentElement.scrollHeight;
-    const winHeight = document.documentElement.clientHeight;
-    const contentHeight = docHeight - winHeight;
+  let rafId = null;
 
-    if (contentHeight > 0) {
-      readingProgress.value = Math.min(100, (scrollTop / contentHeight) * 100);
+  // 计算阅读进度 — 以内容区域为基准，而非整页
+  const updateReadingProgress = () => {
+    if (!containerRef.value) return;
+    const contentEl = containerRef.value.querySelector('.markdown-content');
+    if (!contentEl) return;
+
+    const winHeight = window.innerHeight;
+    const rect = contentEl.getBoundingClientRect();
+    const contentTop = rect.top;
+    const contentHeight = rect.height;
+
+    if (contentHeight <= winHeight) {
+      readingProgress.value = 100;
+      return;
     }
+
+    // Progress = how far the content top has scrolled above the viewport, relative to content height
+    const scrolled = -contentTop;
+    const scrollable = contentHeight - winHeight;
+    readingProgress.value = Math.min(100, Math.max(0, (scrolled / scrollable) * 100));
   };
 
   // 监听滚动以更新活跃标题
   const updateActiveHeading = () => {
     if (!containerRef.value) return;
 
-    const headings = Array.from(
-      containerRef.value.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-    );
-    const scrollTop = containerRef.value.scrollTop;
+    const headings = containerRef.value.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    if (headings.length === 0) return;
 
-    let activeHeading = null;
-    let maxOffset = -Infinity;
-
-    for (const heading of headings) {
-      const offset = heading.offsetTop - scrollTop;
-      if (offset <= 100 && offset > maxOffset) {
-        maxOffset = offset;
-        activeHeading = heading;
+    let active = headings[0];
+    for (const h of headings) {
+      if (h.getBoundingClientRect().top <= 100) {
+        active = h;
+      } else {
+        break;
       }
     }
 
-    if (activeHeading) {
-      activeHeadingId.value = activeHeading.id;
+    if (active && active.id) {
+      activeHeadingId.value = active.id;
     }
   };
 
   // 滚动到评论区
   const scrollToComments = () => {
-    const commentsSection = document.querySelector(".comments-section");
+    const commentsSection = document.querySelector('.comments-section');
     if (commentsSection) {
-      commentsSection.scrollIntoView({ behavior: "smooth" });
+      commentsSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   // 处理内容点击（例如链接点击）
   const handleContentClick = (event) => {
-    // 如果是内部锚点链接
-    if (event.target.tagName === "A" && event.target.hash) {
+    if (event.target.tagName === 'A' && event.target.hash) {
       const id = event.target.hash.slice(1);
       const element = document.getElementById(id);
       if (element) {
         event.preventDefault();
-        element.scrollIntoView({ behavior: "smooth" });
+        element.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };
 
-  // 处理滚动事件
+  // RAF-throttled scroll handler
   const handleScroll = () => {
-    updateReadingProgress();
-    updateActiveHeading();
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      updateReadingProgress();
+      updateActiveHeading();
+    });
   };
 
   // 初始化
   const init = () => {
-    window.addEventListener("scroll", handleScroll);
-    updateReadingProgress();
-    updateActiveHeading();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // 延迟一帧等 DOM 布局完成再计算
+    requestAnimationFrame(() => {
+      updateReadingProgress();
+      updateActiveHeading();
+    });
   };
 
   // 清理
   const cleanup = () => {
-    window.removeEventListener("scroll", handleScroll);
+    window.removeEventListener('scroll', handleScroll);
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
   };
 
   // 监听内容变化
