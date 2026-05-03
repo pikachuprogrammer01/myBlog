@@ -47,6 +47,7 @@ const likesRouter = require('./routes/likes');
 const contactRouter = require('./routes/contact');
 const tagsRouter = require('./routes/tags');
 const toolsRouter = require('./routes/tools');
+const interviewRouter = require('./routes/interview');
 
 app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
@@ -57,6 +58,7 @@ app.use('/api', likesRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/tools', toolsRouter);
+app.use('/api/interview', interviewRouter);
 
 // 5. Mount admin routes
 const adminArticlesRouter = require('./routes/admin/articles');
@@ -65,6 +67,7 @@ const adminCommentsRouter = require('./routes/admin/comments');
 const adminTagsRouter = require('./routes/admin/tags');
 const adminToolsRouter = require('./routes/admin/tools');
 const adminSystemRouter = require('./routes/admin/system');
+const adminInterviewRouter = require('./routes/admin/interview');
 
 app.use('/api/admin/articles', adminArticlesRouter);
 app.use('/api/admin/users', adminUsersRouter);
@@ -72,6 +75,7 @@ app.use('/api/admin/comments', adminCommentsRouter);
 app.use('/api/admin/tags', adminTagsRouter);
 app.use('/api/admin/tools', adminToolsRouter);
 app.use('/api/admin', adminSystemRouter);
+app.use('/api/admin/interview', adminInterviewRouter);
 
 // 6. Health check
 app.get('/api/health', async (req, res) => {

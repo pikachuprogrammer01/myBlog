@@ -26,6 +26,10 @@
           <el-icon><Tools /></el-icon>
           实用工具
         </router-link>
+        <router-link to="/interview" class="nav-link">
+          <el-icon><Notebook /></el-icon>
+          面试题库
+        </router-link>
         <router-link to="/bookmarks" class="nav-link">
           <el-icon><CollectionTag /></el-icon>
           收藏
@@ -120,6 +124,7 @@
     Monitor,
     Reading,
     CollectionTag,
+    Notebook,
   } from "@element-plus/icons-vue";
   import { useAuth } from "@/composables/useAuth";
 

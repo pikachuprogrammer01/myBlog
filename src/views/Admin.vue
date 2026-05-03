@@ -41,6 +41,10 @@
           <ToolManager ref="toolManagerRef" />
         </el-tab-pane>
 
+        <el-tab-pane label="题库管理" name="interview">
+          <InterviewManager ref="interviewManagerRef" />
+        </el-tab-pane>
+
         <el-tab-pane label="用户管理" name="users">
           <UserManager ref="userManagerRef" />
         </el-tab-pane>
@@ -75,6 +79,7 @@
   import TagManager from "@/components/admin/TagManager.vue";
   import ArticleManager from "@/components/admin/ArticleManager.vue";
 import ToolManager from "@/components/admin/ToolManager.vue";
+import InterviewManager from "@/components/admin/InterviewManager.vue";
 import UserManager from "@/components/admin/UserManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
 
@@ -98,6 +103,7 @@ import UserManager from "@/components/admin/UserManager.vue";
   const articleStats = ref([]);
   const tagManagerRef = ref(null);
   const toolManagerRef = ref(null);
+  const interviewManagerRef = ref(null);
 const userManagerRef = ref(null);
   const overviewChartRef = ref(null);
 
@@ -399,6 +405,20 @@ const userManagerRef = ref(null);
           排序: t.sort_order,
         }));
         utils.book_append_sheet(wb, utils.json_to_sheet(toolData), "工具管理");
+      } else if (activeTab.value === "interview") {
+        fileName = `blog-interview-${dateStr}.xlsx`;
+        const interviewData = (interviewManagerRef.value?.questions || []).map((q) => ({
+          题目标题: q.title,
+          分类: q.category,
+          难度: q.difficulty === "easy" ? "简单" : q.difficulty === "medium" ? "中等" : "困难",
+          标签: Array.isArray(q.tags) ? q.tags.join(", ") : "",
+          简述: q.summary || "",
+          浏览: q.view_count || 0,
+          更新时间: q.updated_at
+            ? new Date(q.updated_at).toLocaleString("zh-CN")
+            : "-",
+        }));
+        utils.book_append_sheet(wb, utils.json_to_sheet(interviewData), "题库管理");
       } else if (activeTab.value === "users") {
         fileName = `blog-users-${dateStr}.xlsx`;
         const userData = (userManagerRef.value?.users || []).map((u) => ({

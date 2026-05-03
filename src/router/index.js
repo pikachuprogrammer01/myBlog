@@ -71,6 +71,23 @@ const routes = [
     component: () => import('@/views/Archive.vue')
   },
   {
+    path: '/interview',
+    name: 'Interview',
+    component: () => import('@/views/Interview.vue')
+  },
+  {
+    path: '/interview/:category',
+    name: 'InterviewCategory',
+    component: () => import('@/views/InterviewCategory.vue'),
+    props: true
+  },
+  {
+    path: '/interview/:category/:id',
+    name: 'InterviewQuestion',
+    component: () => import('@/views/InterviewQuestion.vue'),
+    props: true
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/Admin.vue'),
