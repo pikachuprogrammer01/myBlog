@@ -103,6 +103,7 @@
   import { useAuth } from "@/composables/useAuth";
   import { useArticles } from "@/composables/useArticles";
   import { formatDate } from "@/utils/date";
+  import { resizeImage } from "@/utils/image";
   import { getProfile } from "@/api/services/authService";
   import { User, ChatDotRound, Calendar, Plus, Loading } from "@element-plus/icons-vue";
 
@@ -128,30 +129,27 @@
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      ElMessage.warning("图片大小不能超过 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      ElMessage.warning("图片大小不能超过 5MB");
       fileInputRef.value.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      uploadingAvatar.value = true;
-      try {
-        const res = await updateAvatar(reader.result);
-        if (res.success) {
-          ElMessage.success("头像已更新");
-        } else {
-          ElMessage.error(res.message || "上传失败");
-        }
-      } catch {
-        ElMessage.error("头像上传失败");
-      } finally {
-        uploadingAvatar.value = false;
-        fileInputRef.value.value = "";
+    uploadingAvatar.value = true;
+    try {
+      const resized = await resizeImage(file, 300, 300, 0.85);
+      const res = await updateAvatar(resized);
+      if (res.success) {
+        ElMessage.success("头像已更新");
+      } else {
+        ElMessage.error(res.message || "上传失败");
       }
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      ElMessage.error("头像上传失败");
+    } finally {
+      uploadingAvatar.value = false;
+      fileInputRef.value.value = "";
+    }
   }
 
   const roleText = computed(() => {
