@@ -13,7 +13,7 @@
       <span class="tool-count">找到 {{ filteredTools.length }} / 共 {{ tools.length }} 个工具</span>
     </div>
 
-    <el-table :data="filteredTools" stripe v-loading="loading" class="tool-table">
+    <el-table :data="pagedTools" stripe v-loading="loading" class="tool-table">
       <el-table-column prop="name" label="工具名称" min-width="140" />
       <el-table-column prop="category" label="分类" width="100" />
       <el-table-column prop="url" label="链接" min-width="200">
@@ -33,6 +33,16 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <div v-if="totalPages > 1" class="pagination-wrap">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :total="filteredTools.length"
+        :pager-count="5"
+        layout="prev, pager, next"
+      />
+    </div>
 
     <el-dialog
       v-model="dialogVisible"
@@ -70,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import { getTools, createTool, updateTool, deleteTool } from "@/api/services/adminService";
@@ -81,6 +91,8 @@ const loading = ref(false);
 const saving = ref(false);
 const dialogVisible = ref(false);
 const editingId = ref(null);
+const currentPage = ref(1);
+const pageSize = ref(10);
 const form = ref({
   name: "",
   url: "",
@@ -99,6 +111,13 @@ const filteredTools = computed(() => {
       t.category.toLowerCase().includes(q) ||
       (t.description || "").toLowerCase().includes(q)
   );
+});
+
+const totalPages = computed(() => Math.ceil(filteredTools.value.length / pageSize.value));
+
+const pagedTools = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredTools.value.slice(start, start + pageSize.value);
 });
 
 const confirmBase = {
@@ -200,6 +219,10 @@ function handleDelete(row) {
 
 defineExpose({ tools });
 
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
 onMounted(() => {
   loadTools();
 });
@@ -237,6 +260,12 @@ onMounted(() => {
     :deep(.el-table__row) {
       cursor: default;
     }
+  }
+
+  .pagination-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--blog-spacing-md);
   }
 }
 </style>

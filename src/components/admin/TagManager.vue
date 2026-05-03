@@ -20,7 +20,7 @@
       <span class="tag-count">找到 {{ filteredTags.length }} / 共 {{ tags.length }} 个标签</span>
     </div>
 
-    <el-table :data="filteredTags" stripe class="tag-table">
+    <el-table :data="pagedTags" stripe class="tag-table">
       <el-table-column prop="name" label="标签名称" min-width="150">
         <template #default="{ row }">
           <span v-if="editingId !== row.id">{{ row.name }}</span>
@@ -53,11 +53,21 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <div v-if="totalPages > 1" class="pagination-wrap">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :total="filteredTags.length"
+        :pager-count="5"
+        layout="prev, pager, next"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from "vue";
+import { ref, computed, watch, onMounted, inject } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import { getTags, createTag, updateTag, deleteTag } from "@/api/services/adminService";
@@ -71,6 +81,8 @@ const newTagName = ref("");
 const adding = ref(false);
 const editingId = ref(null);
 const editName = ref("");
+const currentPage = ref(1);
+const pageSize = ref(10);
 
 const filteredTags = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
@@ -78,6 +90,13 @@ const filteredTags = computed(() => {
   return tags.value.filter(
     (t) => t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q)
   );
+});
+
+const totalPages = computed(() => Math.ceil(filteredTags.value.length / pageSize.value));
+
+const pagedTags = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredTags.value.slice(start, start + pageSize.value);
 });
 
 const confirmBase = {
@@ -184,6 +203,10 @@ function handleDelete(row) {
     .catch(() => {});
 }
 
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
 defineExpose({ tags, filteredTags });
 
 onMounted(() => {
@@ -218,6 +241,12 @@ onMounted(() => {
     :deep(.el-table__row) {
       cursor: default;
     }
+  }
+
+  .pagination-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--blog-spacing-md);
   }
 }
 </style>

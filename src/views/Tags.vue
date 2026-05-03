@@ -112,15 +112,22 @@ const route = useRoute();
 const router = useRouter();
 const { getPopularTags, getArticlesByTag, getArticles } = useArticles();
 
-const apiTags = ref(null);
+const apiTags = ref(null); // null=loading, []=API failed, [...] = success
+const tagLoading = ref(true);
+
 async function loadTags() {
+  tagLoading.value = true;
   try {
     const res = await getTags();
     if (res.data.success) {
       apiTags.value = res.data.data;
+    } else {
+      apiTags.value = [];
     }
   } catch {
-    // Fallback to article-derived tags
+    apiTags.value = []; // API failed, use store fallback
+  } finally {
+    tagLoading.value = false;
   }
 }
 
@@ -129,18 +136,24 @@ const selectedTag = computed(() =>
 );
 
 const popularTags = computed(() => {
-  if (apiTags.value) {
+  if (apiTags.value && apiTags.value.length > 0) {
     return apiTags.value.filter((t) => t.articleCount > 0).slice(0, 10).map((t) => ({ tag: t.name, count: t.articleCount }));
   }
+  // Still loading — avoid flashing store data that will change
+  if (tagLoading.value) return [];
+  // API failed or returned empty — use store fallback
   return getPopularTags();
 });
 
 const allArticles = computed(() => getArticles());
 
 const allTags = computed(() => {
-  if (apiTags.value) {
+  if (apiTags.value && apiTags.value.length > 0) {
     return apiTags.value.map((t) => ({ tag: t.name, count: t.articleCount }));
   }
+  // Still loading
+  if (tagLoading.value) return [];
+  // API failed — use store fallback
   const tagCount = {};
   allArticles.value.forEach((article) => {
     article.tags?.forEach((tag) => {

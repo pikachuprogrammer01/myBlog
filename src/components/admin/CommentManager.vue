@@ -40,6 +40,7 @@
       ref="tableRef"
       :data="filteredComments"
       stripe
+      v-loading="loading"
       style="width: 100%"
       @sort-change="handleSortChange"
       @selection-change="onSelectionChange"
@@ -75,25 +76,31 @@
       </el-table-column>
       <el-table-column label="操作" width="80" align="center" fixed="right">
         <template #default="{ row }">
-          <el-button type="danger" size="small" plain @click="$emit('delete', row.id)">
+          <el-button type="danger" size="small" plain @click="handleDelete(row.id)">
             删除
           </el-button>
         </template>
       </el-table-column>
     </el-table>
+
+    <div v-if="totalPages > 1" class="pagination-wrap">
+      <el-pagination
+        v-model:current-page="page"
+        :page-size="limit"
+        :total="total"
+        :pager-count="5"
+        layout="prev, pager, next"
+        @current-change="loadComments"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { ChatDotRound, Search } from '@element-plus/icons-vue'
-
-const props = defineProps({
-  comments: {
-    type: Array,
-    default: () => [],
-  },
-})
+import { getAdminComments } from '@/api/services/adminService'
 
 const emit = defineEmits(['delete', 'batchDelete'])
 
@@ -103,6 +110,13 @@ const articleFilter = ref('')
 const selectedIds = ref([])
 const sortKey = ref('created_at')
 const sortOrder = ref('descending')
+const loading = ref(false)
+
+const comments = ref([])
+const page = ref(1)
+const limit = ref(10)
+const total = ref(0)
+const totalPages = ref(0)
 
 function onSelectionChange(rows) {
   selectedIds.value = rows.map((r) => r.id)
@@ -110,15 +124,14 @@ function onSelectionChange(rows) {
 
 const articleOptions = computed(() => {
   const seen = new Set()
-  return props.comments
+  return comments.value
     .filter((c) => c.articleSlug && !seen.has(c.articleSlug) && seen.add(c.articleSlug))
     .map((c) => ({ title: c.articleTitle, slug: c.articleSlug }))
 })
 
 const filteredComments = computed(() => {
-  let list = [...props.comments]
+  let list = [...comments.value]
 
-  // Search filter
   const kw = searchText.value.toLowerCase().trim()
   if (kw) {
     list = list.filter((c) =>
@@ -128,12 +141,10 @@ const filteredComments = computed(() => {
     )
   }
 
-  // Article filter
   if (articleFilter.value) {
     list = list.filter((c) => c.articleSlug === articleFilter.value)
   }
 
-  // Sort
   list.sort((a, b) => {
     const va = a[sortKey.value] ?? ''
     const vb = b[sortKey.value] ?? ''
@@ -151,6 +162,31 @@ function handleSortChange({ prop, order }) {
   }
 }
 
+async function loadComments() {
+  loading.value = true
+  try {
+    const res = await getAdminComments({ page: page.value, limit: limit.value })
+    if (res.data.success) {
+      comments.value = res.data.data.map((c) => ({
+        ...c,
+        username: c.username || c.user_id,
+        articleTitle: c.article_title,
+        articleSlug: c.article_slug,
+      }))
+      total.value = res.data.pagination.total
+      totalPages.value = res.data.pagination.totalPages
+    }
+  } catch (error) {
+    ElMessage.error('加载评论列表失败: ' + (error.response?.data?.message || error.message))
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleDelete(id) {
+  emit('delete', id)
+}
+
 function handleBatchDelete() {
   emit('batchDelete', [...selectedIds.value])
   selectedIds.value = []
@@ -161,6 +197,12 @@ function formatTime(dateStr) {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleString('zh-CN')
 }
+
+defineExpose({ comments, loadComments })
+
+onMounted(() => {
+  loadComments()
+})
 </script>
 
 <style scoped>
@@ -210,6 +252,12 @@ function formatTime(dateStr) {
   &:hover {
     text-decoration: underline;
   }
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--blog-spacing-md);
 }
 
 :deep(.el-table__row) {

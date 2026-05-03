@@ -27,7 +27,7 @@
 
         <el-tab-pane label="评论管理" name="comments">
           <CommentManager
-            :comments="comments"
+            ref="commentManagerRef"
             @delete="deleteComment"
             @batchDelete="batchDeleteComments"
           />
@@ -66,7 +66,7 @@
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
 
-  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, getAdminArticleList, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
+  import { getAdminArticles, getAdminStats, getAdminArticleStats, getAdminArticleList, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
   import { getCache, setCache, removeCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
@@ -98,11 +98,11 @@ import UserManager from "@/components/admin/UserManager.vue";
   };
 
   const activeTab = ref("overview");
-  const comments = ref([]);
   const articles = ref([]);
   const articleStats = ref([]);
   const tagManagerRef = ref(null);
   const toolManagerRef = ref(null);
+  const commentManagerRef = ref(null);
   const interviewManagerRef = ref(null);
 const userManagerRef = ref(null);
   const overviewChartRef = ref(null);
@@ -157,7 +157,6 @@ const userManagerRef = ref(null);
 
     if (skipCache) {
       removeCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
-      removeCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
       removeCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
       adminLoading.value = true;
     } else {
@@ -167,7 +166,6 @@ const userManagerRef = ref(null);
 
       // Step 2: Show cached data from previous admin visit
       const cachedStats = getCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
-      const cachedComments = getCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS);
       const cachedArticleStats = getCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
 
       if (cachedStats) {
@@ -184,10 +182,6 @@ const userManagerRef = ref(null);
         };
       }
 
-      if (cachedComments) {
-        comments.value = cachedComments;
-      }
-
       if (cachedArticleStats) {
         articleStats.value = cachedArticleStats;
       }
@@ -195,10 +189,9 @@ const userManagerRef = ref(null);
 
     // Step 3: Refresh from API
     try {
-      const [articlesRes, statsRes, commentsRes, articleStatsRes] = await Promise.all([
+      const [articlesRes, statsRes, articleStatsRes] = await Promise.all([
         getAdminArticles(),
         getAdminStats(),
-        getAdminComments({ limit: 100 }),
         getAdminArticleStats(),
       ]);
 
@@ -213,16 +206,6 @@ const userManagerRef = ref(null);
       if (statsRes.data.success) {
         stats.value = statsRes.data.data;
         setCache(STORAGE_KEYS.CACHED_ADMIN_STATS, stats.value);
-      }
-
-      if (commentsRes.data.success) {
-        comments.value = commentsRes.data.data.map((c) => ({
-          ...c,
-          username: c.username || c.user_id,
-          articleTitle: c.article_title,
-          articleSlug: c.article_slug,
-        }));
-        setCache(STORAGE_KEYS.CACHED_ADMIN_COMMENTS, comments.value);
       }
 
       if (articleStatsRes.data.success) {
@@ -255,7 +238,7 @@ const userManagerRef = ref(null);
           const result = await deleteCommentApi(commentId);
           if (result.success) {
             ElMessage.success("评论已删除");
-            await loadData();
+            commentManagerRef.value?.loadComments();
           } else {
             ElMessage.error(result.message || "删除失败");
           }
@@ -297,7 +280,7 @@ const userManagerRef = ref(null);
         ElMessage.success(
           `已删除 ${result.deletedCount || commentIds.length} 条评论`,
         );
-        await loadData();
+        commentManagerRef.value?.loadComments();
       } else {
         ElMessage.error(result.message || "批量删除失败");
       }
@@ -358,7 +341,7 @@ const userManagerRef = ref(null);
         utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章数据");
       } else if (activeTab.value === "comments") {
         fileName = `blog-comments-${dateStr}.xlsx`;
-        const data = comments.value.map((c) => ({
+        const data = (commentManagerRef.value?.comments || []).map((c) => ({
           用户: c.username || "-",
           评论内容: c.content || "-",
           所属文章: c.articleTitle || "-",
@@ -452,7 +435,7 @@ const userManagerRef = ref(null);
             ElMessage.success(
               `已清空 ${res.data.data?.deletedCount || 0} 条评论`,
             );
-            comments.value = [];
+            commentManagerRef.value?.loadComments();
             await loadData();
           } else {
             ElMessage.error(res.data.message || "清空失败");
