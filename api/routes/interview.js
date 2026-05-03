@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 
 let tableReady = false;
+let seeded = false;
 
 async function ensureTable() {
   if (tableReady) return;
@@ -80,8 +81,9 @@ const SEED_QUESTIONS = [
 ];
 
 async function seedDefaultQuestions() {
+  if (seeded) return;
   const [rows] = await pool.execute('SELECT COUNT(*) as cnt FROM interview_questions');
-  if (rows[0].cnt > 0) return;
+  if (rows[0].cnt > 0) { seeded = true; return; }
 
   for (const q of SEED_QUESTIONS) {
     const [result] = await pool.execute(
@@ -102,6 +104,7 @@ async function seedDefaultQuestions() {
       );
     }
   }
+  seeded = true;
   console.log(`[Interview] 已插入 ${SEED_QUESTIONS.length} 条种子题目`);
 }
 
