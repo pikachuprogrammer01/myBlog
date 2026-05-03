@@ -14,7 +14,7 @@
               />
             </el-tooltip>
             <el-tooltip content="发送邮件联系我" placement="top">
-              <el-button circle :icon="Message" @click="clickEmal" />
+              <el-button circle :icon="Message" @click="clickEmail" />
             </el-tooltip>
             <el-tag type="success" effect="dark" round class="ml-10"
               >毕业设计项目</el-tag
@@ -132,7 +132,7 @@
       type: "primary",
     },
     {
-      title: "校外实习/项目实战",
+      title: "项目实战",
       content: "参与真实项目开发，提升团队协作与代码质量。",
       timestamp: "2025-07 至 2026-02",
       type: "success",
@@ -157,7 +157,7 @@
     window.open(url, "_blank");
   };
 
-  const clickEmal = () => {
+  const clickEmail = () => {
     router.push("/contact");
   };
 </script>
