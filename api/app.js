@@ -6,6 +6,7 @@ const app = express();
 // 1. CORS
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
+  'https://myblog-api-five.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
@@ -15,7 +16,7 @@ app.use(cors({
     if (!origin || ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     }
   },
   credentials: true,
