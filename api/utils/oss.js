@@ -21,11 +21,16 @@ function getClient() {
   if (!isConfigured()) return null;
   if (client) return client;
   try {
+    const region = process.env.OSS_REGION.trim();
+    const endpoint = region.includes('aliyuncs.com')
+      ? region
+      : `${region}.aliyuncs.com`;
+    console.log('[OSS] 使用 endpoint:', endpoint);
     client = new OSS({
-      region: process.env.OSS_REGION,
-      accessKeyId: process.env.OSS_ACCESS_KEY_ID,
-      accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
-      bucket: process.env.OSS_BUCKET,
+      endpoint,
+      accessKeyId: process.env.OSS_ACCESS_KEY_ID.trim(),
+      accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET.trim(),
+      bucket: process.env.OSS_BUCKET.trim(),
     });
     return client;
   } catch (error) {

@@ -132,7 +132,7 @@ router.get('/profile', requireAuthMw, async (req, res) => {
   }
 });
 
-// PUT /avatar — upload avatar (base64 image)
+// PUT /avatar — upload avatar (base64 image, stored as OSS URL)
 router.put('/avatar', requireAuthMw, async (req, res) => {
   const user = req.user;
   const { image } = req.body || {};
@@ -155,14 +155,14 @@ router.put('/avatar', requireAuthMw, async (req, res) => {
   }
 
   try {
-    let avatarUrl = null;
-
-    if (isOssConfigured()) {
-      const originalName = `avatar.${ext}`;
-      avatarUrl = await uploadImage('avatar', buffer, `image/${ext}`, originalName);
+    if (!isOssConfigured()) {
+      return res.status(500).json({ success: false, message: 'OSS 未配置，头像上传不可用' });
     }
+
+    const originalName = `avatar.${ext}`;
+    const avatarUrl = await uploadImage('avatar', buffer, `image/${ext}`, originalName);
     if (!avatarUrl) {
-      avatarUrl = `data:image/${ext};base64,${base64Data}`;
+      return res.status(500).json({ success: false, message: '头像上传失败' });
     }
 
     await pool.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, user.id]);
