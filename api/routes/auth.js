@@ -160,10 +160,8 @@ router.put('/avatar', requireAuthMw, async (req, res) => {
     if (isOssConfigured()) {
       const originalName = `avatar.${ext}`;
       avatarUrl = await uploadImage('avatar', buffer, `image/${ext}`, originalName);
-      if (!avatarUrl) {
-        return res.status(500).json({ success: false, message: '头像上传失败' });
-      }
-    } else {
+    }
+    if (!avatarUrl) {
       avatarUrl = `data:image/${ext};base64,${base64Data}`;
     }
 

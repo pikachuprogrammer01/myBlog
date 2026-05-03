@@ -20,13 +20,19 @@ function isConfigured() {
 function getClient() {
   if (!isConfigured()) return null;
   if (client) return client;
-  client = new OSS({
-    region: process.env.OSS_REGION,
-    accessKeyId: process.env.OSS_ACCESS_KEY_ID,
-    accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
-    bucket: process.env.OSS_BUCKET,
-  });
-  return client;
+  try {
+    client = new OSS({
+      region: process.env.OSS_REGION,
+      accessKeyId: process.env.OSS_ACCESS_KEY_ID,
+      accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
+      bucket: process.env.OSS_BUCKET,
+    });
+    return client;
+  } catch (error) {
+    console.error('[OSS] 客户端初始化失败:', error.message);
+    configured = false;
+    return null;
+  }
 }
 
 /**
