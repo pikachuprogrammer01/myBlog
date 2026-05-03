@@ -92,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, inject } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Edit, Delete, Key } from "@element-plus/icons-vue";
 import { getAdminUsers, updateAdminUser, deleteAdminUser, resetAdminUserPassword } from "@/api/services/adminService";
@@ -128,6 +128,8 @@ const confirmBase = {
   appendTo: "#app",
   lockScroll: false,
 };
+
+const refreshAdminData = inject('refreshAdminData', null);
 
 function formatDate(dateStr) {
   if (!dateStr) return "-";
@@ -214,6 +216,7 @@ async function handleSave() {
       ElMessage.success("用户已更新");
       dialogVisible.value = false;
       await loadUsers();
+      refreshAdminData?.();
     } else {
       ElMessage.error(res.data.message || "更新失败");
     }
@@ -237,6 +240,7 @@ function handleDelete(row) {
         if (res.data.success) {
           ElMessage.success("用户已删除");
           await loadUsers();
+          refreshAdminData?.();
         } else {
           ElMessage.error(res.data.message || "删除失败");
         }

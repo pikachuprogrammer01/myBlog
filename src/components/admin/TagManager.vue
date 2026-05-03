@@ -57,12 +57,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, inject } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import { getTags, createTag, updateTag, deleteTag } from "@/api/services/adminService";
 import { removeCache } from "@/utils/cache";
 import { STORAGE_KEYS } from "@/constants/storage-keys";
+import { useArticles } from "@/composables/useArticles";
 
 const tags = ref([]);
 const searchQuery = ref("");
@@ -83,6 +84,9 @@ const confirmBase = {
   appendTo: "#app",
   lockScroll: false,
 };
+
+const { invalidateCache } = useArticles();
+const refreshAdminData = inject('refreshAdminData', null);
 
 async function loadTags() {
   try {
@@ -108,6 +112,8 @@ async function handleAdd() {
       ElMessage.success("标签已添加");
       newTagName.value = "";
       removeCache(STORAGE_KEYS.CACHED_ARTICLES);
+      invalidateCache();
+      refreshAdminData?.();
       await loadTags();
     } else {
       ElMessage.error(res.data.message || "添加失败");
@@ -142,6 +148,8 @@ async function handleSave(id) {
       editingId.value = null;
       editName.value = "";
       removeCache(STORAGE_KEYS.CACHED_ARTICLES);
+      invalidateCache();
+      refreshAdminData?.();
       await loadTags();
     } else {
       ElMessage.error(res.data.message || "更新失败");
@@ -163,6 +171,8 @@ function handleDelete(row) {
         if (res.data.success) {
           ElMessage.success("标签已删除");
           removeCache(STORAGE_KEYS.CACHED_ARTICLES);
+          invalidateCache();
+          refreshAdminData?.();
           await loadTags();
         } else {
           ElMessage.error(res.data.message || "删除失败");

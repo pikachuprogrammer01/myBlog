@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete, Upload, Download } from '@element-plus/icons-vue'
 import {
@@ -183,8 +183,12 @@ import {
   getTags,
 } from '@/api/services/adminService'
 import { exportArticle } from '@/utils/export-article'
+import { useArticles } from '@/composables/useArticles'
 
 const confirmBase = { appendTo: '#app', lockScroll: false }
+
+const { invalidateCache } = useArticles()
+const refreshAdminData = inject('refreshAdminData', null)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -326,6 +330,8 @@ async function handleSave() {
     dialogVisible.value = false
     await loadArticles()
     await loadTagOptions()
+    invalidateCache()
+    refreshAdminData?.()
   } catch (error) {
     ElMessage.error((isEditing.value ? '更新' : '创建') + '失败: ' + (error.response?.data?.message || error.message))
   } finally {
@@ -341,6 +347,8 @@ async function handleImport(uploadFile) {
       ElMessage.success(res.data.message || '文章已导入')
       await loadArticles()
       await loadTagOptions()
+      invalidateCache()
+      refreshAdminData?.()
     } else {
       ElMessage.error(res.data.message || '导入失败')
     }
@@ -390,6 +398,8 @@ function handleDelete(row) {
         await deleteAdminArticle(row.id)
         ElMessage.success('文章已删除')
         await loadArticles()
+        invalidateCache()
+        refreshAdminData?.()
       } catch (error) {
         ElMessage.error('删除失败: ' + (error.response?.data?.message || error.message))
       } finally {

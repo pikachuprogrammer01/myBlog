@@ -147,7 +147,13 @@ export const useCommentStore = defineStore('comment', () => {
   async function toggleSticky(commentId) {
     const res = await toggleSticky(commentId);
     if (res.data.success) {
-      // Invalidate cache — reload needed
+      Object.keys(articleComments.value).forEach((slug) => {
+        const list = articleComments.value[slug];
+        const idx = list.findIndex((c) => c.id === commentId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], options: { ...list[idx].options, sticky: res.data.data.sticky } };
+        }
+      });
       return { success: true, sticky: res.data.data.sticky };
     }
     return { success: false, message: res.data.message };

@@ -65,6 +65,10 @@ export function useArticles() {
     return articleStore.getArticlesByCategory(categoryId);
   }
 
+  function invalidateCache() {
+    articleStore.invalidateCache();
+  }
+
   function getTotalViews() {
     return articleStore.getTotalViews();
   }
@@ -83,6 +87,7 @@ export function useArticles() {
     toggleBookmark,
     getBookmarkStatus,
     getBookmarks,
+    invalidateCache,
     getArticlesByTag,
     getArticlesByCategory,
     getTotalViews,

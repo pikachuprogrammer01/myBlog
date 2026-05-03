@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, watch, nextTick } from "vue";
+  import { ref, computed, onMounted, watch, nextTick, provide } from "vue";
   import { useRouter } from "vue-router";
   import { ElMessage, ElMessageBox } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
@@ -221,6 +221,8 @@ const userManagerRef = ref(null);
       );
     }
   };
+
+  provide('refreshAdminData', loadData);
 
   const deleteComment = (commentId) => {
     ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {

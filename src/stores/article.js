@@ -194,10 +194,19 @@ export const useArticleStore = defineStore('article', () => {
     };
   }
 
+  function invalidateCache() {
+    lastFetched.value = 0;
+  }
+
   // Like — via API
   async function toggleLike(slug) {
     const res = await toggleLike(slug);
     if (res.data.success) {
+      const article = articles.value.find((a) => a.slug === slug || a.id === slug);
+      if (article) {
+        article.likes = res.data.data.likes;
+        article.liked = res.data.data.liked;
+      }
       return { liked: res.data.data.liked, likes: res.data.data.likes };
     }
     return null;
@@ -217,6 +226,10 @@ export const useArticleStore = defineStore('article', () => {
   async function toggleBookmark(slug) {
     const res = await toggleBookmark(slug);
     if (res.data.success) {
+      const article = articles.value.find((a) => a.slug === slug || a.id === slug);
+      if (article) {
+        article.bookmarked = res.data.data.bookmarked;
+      }
       return { bookmarked: res.data.data.bookmarked };
     }
     return null;
@@ -255,6 +268,7 @@ export const useArticleStore = defineStore('article', () => {
     getArticlesByTag,
     getArticlesByCategory,
     getTotalViews,
+    invalidateCache,
     toggleLike,
     getLikeStatus,
     toggleBookmark,
