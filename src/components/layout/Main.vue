@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout" :class="{ 'is-auth-page': isAuthPage }">
     <!-- 主体内容 -->
     <main class="app-main">
       <div class="container">
@@ -33,20 +33,23 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from "vue";
+  import { ref, computed, onMounted } from "vue";
+  import { useRoute } from "vue-router";
   import { Loading } from "@element-plus/icons-vue";
   import { useArticleStore } from "@/stores/article";
   import BackToTop from "@/components/common/BackToTop.vue";
+
+  const route = useRoute();
+  const isAuthPage = computed(() =>
+    ["/login", "/register"].includes(route.path),
+  );
 
   const loading = ref(false);
 
   // 应用初始化时并行加载文章和分类（缓存优先，API 后台刷新）
   const articleStore = useArticleStore();
   onMounted(() => {
-    Promise.all([
-      articleStore.loadArticles(),
-      articleStore.loadCategories(),
-    ]);
+    Promise.all([articleStore.loadArticles(), articleStore.loadCategories()]);
   });
 </script>
 
@@ -120,6 +123,28 @@
     }
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  // 登录/注册页：去除容器约束，让页面自行撑满视口；暗色背景防止过渡动画白屏
+  .is-auth-page {
+    background-color: #121416;
+    overflow: hidden;
+
+    :deep(.fade-enter-active),
+    :deep(.fade-leave-active) {
+      transition: none;
+    }
+
+    .app-main {
+      padding-top: 0;
+      padding-bottom: 0;
+
+      .container {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
     }
   }
 
