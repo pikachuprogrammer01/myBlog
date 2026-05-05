@@ -1,686 +1,657 @@
-# 个人博客网站技术规范 (SPEC)
+# SPEC — myBlog 技术规格说明书
 
-## 项目概述
-一个基于Vue 3 + Element Plus的纯静态个人博客网站，所有动态功能（登录、评论、数据管理）均为前端模拟实现，无后端服务。部署于GitHub Pages，主要用于技术演示和个人展示。
+## 1. 项目概述
 
-## 核心目标
-- 展示Vue 3 + Element Plus技术栈能力
-- 实现完整的博客UI/UX流程
-- 通过客户端模拟演示动态功能
-- 零服务器成本、易部署维护
+myBlog 是一个**全栈个人技术博客系统**，前端基于 Vue 3 + Element Plus，后端基于 Node.js/Express + MySQL，采用前后端分离架构，分别部署于 GitHub Pages 和 Vercel。
 
-## 功能需求
+---
 
-### 1. 页面板块（共14个，满足12+要求）
-| 板块 | 路径 | 功能描述 | 技术实现 | 布局类型 |
-|------|------|----------|----------|----------|
-| 首页 | `/` | 文章列表展示、最新文章、热门标签、轮播图 | 静态生成 + 客户端排序/筛选 | 首页布局 |
-| 关于我 | `/about` | 个人介绍、技能、经历、时间线 | 静态内容，可配置化 | 关于页布局 |
-| 文章详情 | `/article/:id` | 文章内容展示、评论列表、评论表单、目录导航 | Markdown渲染 + 评论模拟 | 文章详情布局 |
-| 工具 | `/tools` | 外部工具链接集合，分类筛选 | 链接卡片网格布局 | 工具网格布局 |
-| 联系 | `/contact` | 模拟联系表单（无真实提交） | 表单验证 + 成功提示模拟 | 表单居中布局 |
-| 登录 | `/login` | 用户登录/注销（硬编码凭证） | 本地会话模拟 + 路由守卫 | 认证卡片布局 |
-| 注册 | `/register` | 模拟注册流程（无真实注册） | 表单验证 + 成功提示 | 认证卡片布局 |
-| 用户中心 | `/profile` | 用户信息展示、我的评论、个人设置 | 本地数据展示 | 用户面板布局 |
-| 标签归档 | `/tags` | 所有标签云，点击进入标签文章列表 | 标签统计与筛选 | 标签云布局 |
-| 分类页面 | `/categories` | 文章分类导航，分类文章列表 | 分类数据组织 | 分类网格布局 |
-| 搜索页面 | `/search` | 全文搜索（客户端搜索），搜索结果展示 | 前端搜索算法 | 搜索页面布局 |
-| 文章归档 | `/archive` | 按年月归档的文章列表 | 时间分组统计 | 时间线布局 |
-| 管理后台 | `/admin` | Admin管理面板（清空评论、查看数据） | 本地数据管理 | 管理表格布局 |
-| 404页面 | `/*` | 自定义404错误页面，导航回首页 | 路由捕获 | 错误页布局 |
+## 2. 技术栈
 
-### 2. 用户系统（模拟）
-- **用户角色**：普通用户、Admin（初始硬编码）+ 动态注册用户（仅本地）
-- **初始硬编码用户**（不可修改）：
-  | 用户名 | 密码 | 角色 | 用途 |
-  |--------|------|------|------|
-  | admin | admin123 | admin | 管理员演示 |
-  | user1 | user123 | user | 普通用户演示 |
-  | user2 | user456 | user | 普通用户演示 |
-- **注册功能**：模拟注册流程，新用户信息存储于`localStorage`（键：`blog_users`）
-  - 注册表单验证（用户名唯一性、密码强度）
-  - 注册成功自动登录（生成模拟JWT，保存用户信息）
-  - 注册用户仅限当前浏览器使用，无跨设备同步
-- **登录方式**：用户名+密码（前端验证硬编码列表 + localStorage用户列表）
-- **权限控制**：
-  - 普通用户（包括注册用户）：可评论（需登录）
-  - Admin：额外看到"管理”入口，可清空本地评论数据
-- **会话管理**：JWT模拟（token存localStorage，无真实签发/验证）
-- **联动流程**：
-  1. 注册成功 → 自动登录 → 跳转到首页（已登录状态）
-  2. 登录成功 → 更新全局认证状态 → 可立即发表评论
-  3. 评论时自动关联当前用户ID和用户名
-  4. 注销后清除token，但保留本地注册用户数据
+### 2.1 前端
 
-### 3. 评论系统（客户端存储）
-- **存储位置**：`localStorage`（键：`blog_comments`）
-- **数据结构**：
-  ```json
-  {
-    "id": "uuid",
-    "articleId": "string",
-    "userId": "string",
-    "username": "string",
-    "content": "string",
-    "createdAt": "timestamp",
-    "isDeleted": "boolean"
-  }
-  ```
-- **功能限制**：
-  - 评论仅在同一浏览器内共享（不同设备/用户无法看到）
-  - 无审核、无垃圾过滤（客户端数据自担风险）
-  - Admin可删除本地评论（仅影响当前浏览器）
-- **操作流程**：
-  1. 用户登录后，认证状态存储在`authStore`
-  2. 发表评论时，从`authStore`获取当前`userId`和`username`
-  3. 评论保存到`localStorage`，包含用户信息和时间戳
-  4. 评论列表根据`articleId`筛选，按时间倒序排列
-  5. 用户可看到自己的评论，Admin可删除任何评论（软删除标记）
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Vue 3 | 3.4.x | 前端框架（Composition API + `<script setup>`） |
+| Vite | 5.x | 构建工具 |
+| Vue Router | 4.x | 前端路由（Hash 模式） |
+| Pinia | 2.x | 状态管理 |
+| Element Plus | 2.7.x | UI 组件库 |
+| Axios | 1.x | HTTP 客户端 |
+| ECharts | 6.x | 管理后台图表 |
+| Day.js | 1.x | 日期处理 |
+| Markdown-it | 14.x | Markdown 渲染 |
+| SCSS / Sass | 1.69.x | CSS 预处理 |
+| xlsx + file-saver + jszip | — | Excel 导出 |
 
-### 4. 附加要求（课程/作业要求）
+### 2.2 后端
 
-1. **页面层级**：至少3级页面（例如：首页 → 文章列表 → 文章详情）
-2. **布局多样性**：不同布局的网页至少5种以上
-   - 首页布局（带轮播图、文章网格）
-   - 文章列表布局（带侧边栏）
-   - 文章详情布局（两栏：内容+目录）
-   - 工具页面布局（卡片网格）
-   - 用户中心布局（个人面板）
-   - 管理后台布局（表格+操作）
-3. **页面数量**：网站页面总数为12个以上
-   - 核心6页 + 扩展页：标签归档、分类页面、搜索页面、用户个人中心、设置页面、404页面、隐私政策、站点地图、友情链接、文章归档
-4. **JavaScript动效**：2个以上
-   - 首页文章轮播图（自动轮播 + 手动切换）
-   - 点击跳到页面顶端（滚动到顶部按钮）
-   - 动态数据展示（实时评论计数、阅读量动画）
-   - 动态数据校验（登录表单实时验证）
-5. **CSS规范**：必须使用CSS+DIV布局，且HTML代码与CSS代码分离
-   - Vue单文件组件中CSS写在`<style>`标签内，符合分离要求
-   - 禁止行内样式（style属性）和内联样式（style标签在HTML中）
-   - 使用CSS预处理器（Sass/Scss可选）
-6. **LOGO设计**：需使用Photoshop自行设计的LOGO体现网站特色
-   - 不能使用AI及相关其他工具或网站自动生成
-   - 提供PSD源文件及多种格式导出（PNG透明背景、SVG）
-   - LOGO需出现在网站Header和Favicon
+| 技术 | 用途 |
+|------|------|
+| Node.js + Express | API 服务 |
+| mysql2 | MySQL 数据库驱动 |
+| bcryptjs | 密码哈希 |
+| jsonwebtoken | JWT 签发与验证 |
+| nodemailer | 邮件发送（联系表单） |
+| gray-matter | Markdown 前言解析 |
+| cors | 跨域控制 |
 
-### 5. 内容管理
-- **文章格式**：Markdown + YAML frontmatter（构建时转为JSON）
-- **发布流程**：Git提交 → 手动构建 → 推送至GitHub Pages
-- **更新频率**：低频（几周/月）
-- **文章字段**：
-  ```yaml
-  title: "文章标题"
-  date: "2023-10-01"
-  tags: ["标签1", "标签2"]
-  excerpt: "摘要"
-  cover: "封面图URL"
-  published: true
-  ```
+### 2.3 基础设施
 
-### 5. 数据管理（放弃项）
-- ❌ 数据导入/导出功能（纯客户端无法实现集中管理）
-- ❌ 跨设备数据同步
-- ❌ 真实数据库备份
+| 服务 | 用途 |
+|------|------|
+| GitHub Pages | 前端静态托管 |
+| Vercel | API Serverless 部署 |
+| TiDB Cloud | MySQL 兼容云数据库 |
 
-## 技术栈
+### 2.4 开发工具
 
-### 前端框架
-- **Vue 3**：Composition API + `<script setup>`
-- **构建工具**：Vite 5.x
-- **路由**：Vue Router 4.x
-- **状态管理**：Pinia 2.x
-- **UI组件库**：Element Plus（按需导入）
+| 工具 | 用途 |
+|------|------|
+| Vitest + jsdom | 单元测试 |
+| ESLint + Prettier | 代码规范与格式化 |
+| gh-pages | 前端部署 |
 
-### CSS规范
-- **分离要求**：HTML代码与CSS代码分离，Vue单文件组件中CSS必须写在`<style>`标签内
-- **禁止行内样式**：不得使用`style`属性或`<style>`标签内联在HTML模板中
-- **预处理器**：可选Sass/Scss（推荐），提升CSS可维护性
-- **命名规范**：BEM或自定义前缀（如`.blog-header`）避免样式冲突
-- **响应式设计**：使用媒体查询实现移动端适配，Element Plus栅格系统辅助
+---
 
-### 开发工具
-- **包管理器**：npm / yarn / pnpm（任选）
-- **代码规范**：ESLint（Vue官方推荐规则）+ Prettier
-- **Git钩子**：Husky + lint-staged
-- **TypeScript**：❌ 不使用（保持简单）
+## 3. 系统架构
 
-### 第三方库
-- **Markdown解析**：markdown-it + front-matter
-- **工具库**：dayjs（日期处理）、uuid（生成ID）
-- **图标**：Element Plus图标组件（或考虑@element-plus/icons-vue）
+### 3.1 部署拓扑
 
-### 构建与部署
-- **部署目标**：GitHub Pages（纯静态托管）
-- **构建命令**：`npm run build`
-- **部署方式**：手动构建后推送`dist`到`gh-pages`分支
-- **基础路径**：根据仓库名配置（如`/myBlog/`）
+```
+┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│  GitHub Pages   │────▶│  Vercel Server  │────▶│  TiDB Cloud  │
+│  (/myBlog/)     │     │  (/api/*)       │     │  (MySQL)     │
+│  静态前端 SPA    │     │  Node.js API    │     │  数据库       │
+└─────────────────┘     └─────────────────┘     └──────────────┘
+```
 
-## 架构设计
+### 3.2 前端分层架构
 
-### 项目结构
 ```
 src/
-├── assets/           # 静态资源（图片、样式）
-├── components/       # 可复用组件
-│   ├── layout/      # 布局组件（Header、Footer）
-│   ├── blog/        # 博客相关组件（ArticleCard、CommentList）
-│   └── common/      # 通用组件（Loading、Empty）
-├── composables/     # Composition API 可组合函数
-│   ├── useAuth.ts   # 认证逻辑
-│   ├── useComments.ts # 评论管理
-│   └── useArticles.ts # 文章数据
-├── router/          # 路由配置
-├── stores/          # Pinia store
-│   ├── auth.ts      # 用户认证状态
-│   ├── comment.ts   # 评论数据
-│   └── article.ts   # 文章数据
-├── views/           # 页面组件（共14个）
-│   ├── Home.vue
-│   ├── About.vue
-│   ├── Article.vue
-│   ├── Tools.vue
-│   ├── Contact.vue
-│   ├── Login.vue
-│   ├── Register.vue
-│   ├── Profile.vue
-│   ├── Tags.vue
-│   ├── Categories.vue
-│   ├── Search.vue
-│   ├── Archive.vue
-│   ├── Admin.vue
-│   └── NotFound.vue
-├── constants/       # 常量定义
-│   ├── storage-keys.js  # localStorage键名常量
-│   ├── routes.js        # 路由路径常量
-│   ├── api.js          # API端点常量（模拟）
-│   ├── regex.js        # 正则表达式常量
-│   └── theme.js        # 主题样式常量
-├── utils/           # 工具函数
-├── types/           # TypeScript类型（如使用）
-├── data/            # 静态数据（构建时生成）
-└── App.vue
+├── api/          # HTTP 服务层（axios 封装 + 各模块 service）
+├── stores/       # Pinia 状态管理层（auth, article, comment）
+├── composables/  # 组合式函数（useAuth, useArticles 等）
+├── views/        # 页面组件（18 个路由页面）
+├── components/   # 通用组件（layout, blog, admin, common, home）
+├── router/       # 路由配置 + 导航守卫
+├── utils/        # 工具函数（日期、缓存、存储、图片处理）
+├── constants/    # 常量（localStorage key）
+└── assets/       # 样式、图片
 ```
 
-### 数据流设计
-1. **文章数据**：构建时Markdown → JSON → 打包进应用 → 运行时加载
-2. **评论数据**：用户操作 → Pinia Store → localStorage持久化
-3. **用户状态**：登录验证（硬编码）→ Pinia Store → localStorage token
+数据流向：`View → Composable → Store → Service → API → Backend → DB`
 
-### 状态管理策略
-| Store | 数据来源 | 持久化 | 更新时机 |
-|-------|----------|--------|----------|
-| `auth` | localStorage + 硬编码凭证 | localStorage | 登录/注销 |
-| `comment` | localStorage + 用户输入 | localStorage | 评论增删 |
-| `article` | 构建时生成的JSON文件 | 无（只读） | 应用加载时 |
+### 3.3 后端分层架构
 
-## 详细设计
-
-### 1. 路由配置
-```javascript
-const routes = [
-  { path: '/', name: 'Home', component: () => import('@/views/Home.vue') },
-  { path: '/about', name: 'About', component: () => import('@/views/About.vue') },
-  {
-    path: '/article/:id',
-    name: 'Article',
-    component: () => import('@/views/Article.vue'),
-    props: true
-  },
-  { path: '/tools', name: 'Tools', component: () => import('@/views/Tools.vue') },
-  { path: '/contact', name: 'Contact', component: () => import('@/views/Contact.vue') },
-  { path: '/login', name: 'Login', component: () => import('@/views/Login.vue') },
-  { path: '/register', name: 'Register', component: () => import('@/views/Register.vue') },
-  { path: '/profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { requiresAuth: true } },
-  { path: '/tags', name: 'Tags', component: () => import('@/views/Tags.vue') },
-  { path: '/categories', name: 'Categories', component: () => import('@/views/Categories.vue') },
-  { path: '/search', name: 'Search', component: () => import('@/views/Search.vue') },
-  { path: '/archive', name: 'Archive', component: () => import('@/views/Archive.vue') },
-  { path: '/admin', name: 'Admin', component: () => import('@/views/Admin.vue'), meta: { requiresAdmin: true } },
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue') }
-]
+```
+api/
+├── app.js        # Express 应用入口（CORS、路由挂载、错误处理）
+├── db.js         # MySQL 连接池
+├── middleware/    # JWT 鉴权中间件
+├── routes/       # 公开路由（11 个模块）
+│   └── admin/    # 管理员路由（7 个模块）
+└── seed.js       # 数据库种子脚本
 ```
 
-### 2. 认证系统（模拟）
-```javascript
-// 硬编码用户数据（初始用户，不可修改）
-const HARDCODED_USERS = [
-  { id: '1', username: 'admin', password: 'admin123', role: 'admin' },
-  { id: '2', username: 'user1', password: 'user123', role: 'user' },
-  { id: '3', username: 'user2', password: 'user456', role: 'user' }
-]
+请求流程：`app.js → CORS → Body Parser → Route → Middleware(Auth) → DB → Response`
 
-// 本地注册用户存储键
-const USER_STORAGE_KEY = 'blog_users'
+---
 
-// 获取所有用户（硬编码 + 本地注册）
-function getAllUsers() {
-  const localUsers = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || '[]')
-  return [...HARDCODED_USERS, ...localUsers]
+## 4. 数据库设计
+
+### 4.1 ER 关系
+
+```
+users (用户)
+  │
+  ├──< comments (评论，一对多)
+  ├──< comment_likes (评论点赞，一对多)
+  ├──< article_likes (文章点赞，一对多)
+  ├──< bookmarks (收藏，一对多)
+  └──< contact_messages (联系消息，一对多)
+
+articles (文章)
+  │
+  ├──< comments (评论，一对多)
+  ├──< article_likes (点赞，一对多)
+  ├──< bookmarks (收藏，一对多)
+  └──< categories (分类，多对一)
+
+categories (分类)
+  └──< articles (文章，一对多)
+```
+
+### 4.2 数据表结构
+
+#### users — 用户表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | 用户 ID |
+| username | VARCHAR(50) | UNIQUE, NOT NULL | 用户名 |
+| password | VARCHAR(255) | NOT NULL | bcrypt 哈希密码 |
+| role | ENUM('admin','user') | DEFAULT 'user' | 角色 |
+| avatar_url | VARCHAR(500) | NULL | 头像 URL（OSS） |
+| created_at | TIMESTAMP | DEFAULT NOW() | 注册时间 |
+
+#### categories — 分类表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | 分类 ID |
+| name | VARCHAR(100) | UNIQUE, NOT NULL | 分类名 |
+| slug | VARCHAR(100) | UNIQUE, NOT NULL | URL 友好标识 |
+| sort_order | INT | DEFAULT 0 | 排序 |
+
+#### articles — 文章表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | 文章 ID |
+| title | VARCHAR(255) | NOT NULL | 标题 |
+| slug | VARCHAR(255) | UNIQUE, NOT NULL | URL 标识 |
+| summary | TEXT | NULL | 摘要 |
+| content | LONGTEXT | NOT NULL | Markdown 正文 |
+| cover_url | VARCHAR(500) | NULL | 封面图 URL |
+| category_id | INT | FK → categories.id | 分类 |
+| tags | VARCHAR(500) | NULL | 标签（逗号分隔） |
+| status | ENUM('published','draft') | DEFAULT 'published' | 发布状态 |
+| view_count | INT | DEFAULT 0 | 阅读量 |
+| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
+| updated_at | TIMESTAMP | ON UPDATE NOW() | 更新时间 |
+
+#### comments — 评论表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | 评论 ID |
+| article_slug | VARCHAR(255) | NOT NULL | 所属文章 |
+| user_id | INT | FK → users.id | 评论者 |
+| parent_id | INT | FK → comments.id, NULL | 父评论（嵌套回复） |
+| content | TEXT | NOT NULL | 评论内容 |
+| is_sticky | BOOLEAN | DEFAULT FALSE | 置顶标记 |
+| is_deleted | BOOLEAN | DEFAULT FALSE | 软删除标记 |
+| like_count | INT | DEFAULT 0 | 点赞数 |
+| created_at | TIMESTAMP | DEFAULT NOW() | 创建时间 |
+| updated_at | TIMESTAMP | ON UPDATE NOW() | 更新时间 |
+
+#### article_likes — 文章点赞表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| article_slug | VARCHAR(255) | NOT NULL | 文章标识 |
+| user_id | INT | FK → users.id | 点赞用户 |
+| created_at | TIMESTAMP | DEFAULT NOW() | 点赞时间 |
+| **UNIQUE** | (article_slug, user_id) | — | 一人一票 |
+
+#### comment_likes — 评论点赞表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| comment_id | INT | FK → comments.id | 评论 ID |
+| user_id | INT | FK → users.id | 点赞用户 |
+| created_at | TIMESTAMP | DEFAULT NOW() | 点赞时间 |
+| **UNIQUE** | (comment_id, user_id) | — | 一人一票 |
+
+#### bookmarks — 收藏表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| article_slug | VARCHAR(255) | NOT NULL | 文章标识 |
+| user_id | INT | FK → users.id | 收藏用户 |
+| created_at | TIMESTAMP | DEFAULT NOW() | 收藏时间 |
+| **UNIQUE** | (article_slug, user_id) | — | 一人一次 |
+
+#### contact_messages — 联系消息表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| user_id | INT | FK → users.id | 发送用户 |
+| email | VARCHAR(255) | NOT NULL | 邮箱 |
+| subject | VARCHAR(255) | NOT NULL | 主题 |
+| message | TEXT | NOT NULL | 内容 |
+| is_read | BOOLEAN | DEFAULT FALSE | 已读标记 |
+| created_at | TIMESTAMP | DEFAULT NOW() | 发送时间 |
+
+#### interview_categories — 面试题分类表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| name | VARCHAR(100) | NOT NULL | 分类名 |
+| slug | VARCHAR(100) | UNIQUE, NOT NULL | URL 标识 |
+| icon | VARCHAR(100) | NULL | 图标 |
+| sort_order | INT | DEFAULT 0 | 排序 |
+
+#### interview_questions — 面试题表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| title | VARCHAR(255) | NOT NULL | 题目 |
+| category_id | INT | FK → interview_categories.id | 分类 |
+| difficulty | ENUM('easy','medium','hard') | NOT NULL | 难度 |
+| tags | VARCHAR(500) | NULL | 标签 |
+| summary | TEXT | NULL | 摘要 |
+| content | LONGTEXT | NOT NULL | Markdown 内容 |
+| created_at | TIMESTAMP | DEFAULT NOW() | — |
+| updated_at | TIMESTAMP | ON UPDATE NOW() | — |
+
+#### interview_comments — 面试题评论表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| question_id | INT | FK → interview_questions.id | 所属题目 |
+| user_id | INT | FK → users.id | 评论者 |
+| content | TEXT | NOT NULL | 评论内容 |
+| parent_id | INT | FK → interview_comments.id | 父评论 |
+| is_deleted | BOOLEAN | DEFAULT FALSE | 软删除 |
+| created_at | TIMESTAMP | DEFAULT NOW() | — |
+
+#### tools — 工具推荐表
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | PK, AUTO_INCREMENT | — |
+| name | VARCHAR(255) | NOT NULL | 工具名 |
+| url | VARCHAR(500) | NOT NULL | 链接 |
+| description | TEXT | NULL | 描述 |
+| category | VARCHAR(100) | NOT NULL | 分类 |
+| icon_url | VARCHAR(500) | NULL | 图标 |
+| sort_order | INT | DEFAULT 0 | 排序 |
+
+---
+
+## 5. API 接口规范
+
+### 5.1 通用约定
+
+- **Base URL**: `https://myblog-api-five.vercel.app`
+- **请求格式**: `Content-Type: application/json`
+- **认证方式**: `Authorization: Bearer <JWT_TOKEN>`
+- **响应格式**:
+  ```json
+  { "success": true, "data": {}, "message": "" }
+  { "success": false, "message": "错误描述" }
+  ```
+- **分页格式**: Query 参数 `?page=1&pageSize=10`，响应含 `{ data: [], total, page, pageSize }`
+
+### 5.2 公开接口（无需认证）
+
+#### 认证模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/auth/register` | 注册（username, password） |
+| POST | `/api/auth/login` | 登录（username, password），返回 JWT |
+| GET | `/api/auth/profile` | 获取当前用户信息（需认证） |
+| POST | `/api/auth/avatar` | 上传头像（需认证，multipart） |
+| DELETE | `/api/auth/avatar` | 删除头像（需认证） |
+
+#### 文章模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/articles` | 文章列表（?page=&pageSize=&category=&tag=&status=published） |
+| GET | `/api/articles/:slug` | 文章详情（自动增加阅读量） |
+| GET | `/api/categories` | 分类列表（含文章数量） |
+| GET | `/api/categories/:slug/articles` | 按分类获取文章 |
+| GET | `/api/tags` | 标签列表（含文章数量） |
+| GET | `/api/stats` | 站点统计（文章/评论/用户/浏览量） |
+
+#### 评论模块
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/articles/:slug/comments` | 文章评论列表（?sort=latest|oldest|hot） |
+| POST | `/api/articles/:slug/comments` | 发表评论（需认证，content, parent_id） |
+| PUT | `/api/comments/:id` | 编辑评论（需认证，仅本人/管理员） |
+| DELETE | `/api/comments/:id` | 软删除评论（需认证，仅本人/管理员） |
+| DELETE | `/api/comments/:id/permanent` | 永久删除（需管理员） |
+| PUT | `/api/comments/:id/sticky` | 置顶/取消置顶（需管理员） |
+
+#### 点赞与收藏
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/articles/:slug/like` | 文章点赞/取消（需认证） |
+| GET | `/api/articles/:slug/like` | 文章点赞状态与总数 |
+| POST | `/api/comments/:id/like` | 评论点赞/取消（需认证） |
+| POST | `/api/articles/:slug/bookmark` | 收藏/取消（需认证） |
+| GET | `/api/user/bookmarks` | 我的收藏列表（需认证） |
+
+#### 联系表单
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/contact` | 提交联系信息（需认证，限 10 次/天） |
+| GET | `/api/contact` | 消息列表（需管理员） |
+| PUT | `/api/contact/:id/read` | 标记已读（需管理员） |
+
+#### 工具推荐
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/tools` | 工具列表（?category=） |
+
+#### 面试题库
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/interview/categories` | 分类列表 |
+| GET | `/api/interview/questions` | 题目列表（?category=, ?difficulty=） |
+| GET | `/api/interview/questions/:id` | 题目详情 |
+| GET | `/api/interview/questions/:id/comments` | 题目评论 |
+| POST | `/api/interview/questions/:id/comments` | 发表评论（需认证） |
+
+### 5.3 管理接口（需管理员认证）
+
+#### 文章管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/articles` | 全部文章（含草稿） |
+| POST | `/api/admin/articles` | 新建文章 |
+| PUT | `/api/admin/articles/:id` | 编辑文章 |
+| DELETE | `/api/admin/articles/:id` | 删除文章 |
+| POST | `/api/admin/articles/upload` | Markdown 文件上传解析 |
+
+#### 评论管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/comments` | 全部评论列表 |
+| DELETE | `/api/admin/comments/:id` | 删除评论 |
+| POST | `/api/admin/comments/batch-delete` | 批量删除 |
+| DELETE | `/api/admin/comments/clear` | 清空所有评论 |
+
+#### 标签管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/tags` | 标签列表 |
+| POST | `/api/admin/tags` | 新建标签 |
+| PUT | `/api/admin/tags/:id` | 编辑标签 |
+| DELETE | `/api/admin/tags/:id` | 删除标签 |
+
+#### 用户管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/users` | 用户列表 |
+| PUT | `/api/admin/users/:id` | 编辑用户（角色） |
+| DELETE | `/api/admin/users/:id` | 删除用户 |
+| POST | `/api/admin/users/:id/reset-password` | 重置密码 |
+
+#### 系统管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/stats` | 管理后台统计数据 |
+| POST | `/api/admin/reset` | 重置系统数据 |
+| POST | `/api/admin/email-test` | 测试邮件配置 |
+
+#### 工具管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/tools` | 工具列表 |
+| POST | `/api/admin/tools` | 新建工具 |
+| PUT | `/api/admin/tools/:id` | 编辑工具 |
+| DELETE | `/api/admin/tools/:id` | 删除工具 |
+
+#### 面试题管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/interview` | 题目列表 |
+| POST | `/api/admin/interview` | 新建题目 |
+| PUT | `/api/admin/interview/:id` | 编辑题目 |
+| DELETE | `/api/admin/interview/:id` | 删除题目 |
+
+#### 健康检查
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/health` | 服务健康检查（含数据库连接） |
+
+---
+
+## 6. 前端路由设计
+
+| 路径 | 组件 | 认证 | 说明 |
+|------|------|------|------|
+| `/` | Home | 无 | 首页 |
+| `/about` | About | 无 | 关于 |
+| `/article/:id` | Article | 无 | 文章详情（id 为 slug） |
+| `/tools` | Tools | 无 | 工具推荐 |
+| `/contact` | Contact | 需登录 | 联系表单 |
+| `/login` | Login | 访客 | 登录 |
+| `/register` | Register | 访客 | 注册 |
+| `/profile` | Profile | 需登录 | 个人中心 |
+| `/bookmarks` | Bookmarks | 需登录 | 我的收藏 |
+| `/tags` | Tags | 无 | 标签云 |
+| `/categories` | Categories | 无 | 分类浏览 |
+| `/search` | Search | 无 | 搜索 |
+| `/archive` | Archive | 无 | 归档 |
+| `/interview` | Interview | 无 | 面试题库首页 |
+| `/interview/:category` | InterviewCategory | 无 | 题目列表 |
+| `/interview/:category/:id` | InterviewQuestion | 无 | 题目详情 |
+| `/admin` | Admin | 管理员 | 管理后台 |
+| `/:pathMatch(.*)*` | NotFound | 无 | 404 |
+
+**路由守卫**：
+- `requiresAuth` → 验证 JWT，未登录跳转 `/login`
+- `requiresAdmin` → 验证管理员角色，非管理员跳转首页
+
+---
+
+## 7. 组件树
+
+### 7.1 布局层
+
+```
+App.vue
+├── Header.vue（固定顶栏）
+│   ├── Logo
+│   ├── NavLinks（首页/归档/分类/标签/更多）
+│   ├── SearchInput
+│   └── AuthZone（登录/注册 或 用户下拉菜单）
+├── Main.vue
+│   ├── <router-view />（fade 过渡动画）
+│   └── BackToTop.vue（回到顶部）
+└── Footer.vue（页脚）
+```
+
+### 7.2 首页
+
+```
+Home.vue
+├── Carousel.vue（精选文章轮播）
+├── SectionHeader.vue（布局切换按钮）
+├── ArticleList.vue
+│   └── ArticleCard.vue × N（文章卡片）
+└── Sidebar.vue（作者卡片 + 热门标签）
+```
+
+### 7.3 文章详情页
+
+```
+Article.vue
+├── Breadcrumb
+├── ArticleHeader（标题/日期/浏览量/分类/封面图）
+├── MarkdownRenderer.vue
+│   ├── ArticleContent（Markdown 渲染）
+│   ├── TocNav（浮动目录）
+│   └── ProgressBar（阅读进度条）
+├── ArticleActions（点赞/收藏/分享/打印/导出/投诉）
+├── PrevNextNav（上一篇/下一篇）
+└── CommentSection
+    ├── CommentForm.vue（评论输入 + Markdown 工具栏）
+    └── CommentList.vue
+        └── CommentItem × N（含嵌套回复）
+```
+
+### 7.4 管理后台
+
+```
+Admin.vue
+├── AdminStats.vue（统计卡片）
+├── AdminChart.vue（ECharts 饼图）
+├── ArticleStatsTable.vue（文章数据表）
+├── ArticleManager.vue（文章 CRUD）
+├── CommentManager.vue（评论管理）
+├── TagManager.vue（标签管理）
+├── ToolManager.vue（工具管理）
+├── InterviewManager.vue（面试题管理）
+├── UserManager.vue（用户管理）
+└── DataActions.vue（数据操作按钮）
+```
+
+---
+
+## 8. 状态管理
+
+### 8.1 Auth Store（`src/stores/auth.js`）
+
+```js
+state: { user, token, isAuthenticated, isAdmin }
+actions: {
+  login(username, password)      // → POST /api/auth/login, 存储 JWT
+  register(username, password)   // → POST /api/auth/register, 自动登录
+  restoreSession()               // → GET /api/auth/profile, 从 localStorage 恢复
+  logout()                       // 清除 token 和 user
+  updateAvatarUrl(url)           // 更新头像
+  removeAvatarUrl()              // 删除头像
 }
-
-// 注册流程
-1. 用户填写用户名、密码、确认密码
-2. 前端验证：用户名唯一性（不与现有用户重复）、密码强度
-3. 验证通过 → 生成新用户对象（id、username、password、role: 'user'）
-4. 保存到localStorage（USER_STORAGE_KEY）
-5. 自动登录：生成模拟JWT，更新authStore
-6. 跳转到首页或原页面
-
-// 登录流程
-1. 用户输入用户名/密码
-2. 前端比对所有用户列表（getAllUsers()）
-3. 匹配成功 → 生成模拟JWT（随机字符串）存localStorage
-4. Pinia store更新登录状态（用户信息、角色）
-5. 路由守卫检查需要登录的页面（如评论页）
-
-// 注销流程
-1. 清除localStorage中的JWT
-2. authStore重置为未登录状态
-3. 跳转到首页
 ```
 
-### 3. 评论系统实现
-```javascript
-// 评论存储键名
-const STORAGE_KEY = 'blog_comments'
+### 8.2 Article Store（`src/stores/article.js`）
 
-// 核心操作
-class CommentService {
-  // 获取文章评论
-  getComments(articleId) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    return all.filter(c => c.articleId === articleId && !c.isDeleted)
-  }
+```js
+state: { articles, categories }
+加载策略: localStorage 缓存 → 静态 JSON 文件 → API 刷新
 
-  // 添加评论（需登录状态）
-  addComment(articleId, content, userId) {
-    const comment = {
-      id: uuid(),
-      articleId,
-      userId,
-      content,
-      createdAt: Date.now(),
-      isDeleted: false
-    }
-    // 保存到localStorage
-    // 更新Pinia store
-  }
-
-  // Admin删除评论（软删除标记）
-  deleteComment(commentId) {
-    // 标记isDeleted: true
-    // 仅对当前浏览器有效
-  }
+methods: {
+  loadArticles(options)          // 文章列表
+  loadCategories()               // 分类列表
+  searchArticles(query)          // 搜索
+  getArticlesByTag(tag)          // 按标签筛选
+  getArticlesByCategory(slug)    // 按分类筛选
+  getPreviousNextArticles(slug)  // 上下篇导航
+  toggleLike(slug)              // 点赞/取消
+  toggleBookmark(slug)           // 收藏/取消
+  getBookmarks()                 // 收藏列表
+  invalidateCache()              // 清除缓存
 }
 ```
 
-### 4. 文章系统
-```javascript
-// 构建时：Markdown → JSON
-// 运行时：加载JSON文件
-import articles from '../data/articles.json'
+### 8.3 Comment Store（`src/stores/comment.js`）
 
-// 文章查找
-function getArticle(id) {
-  return articles.find(a => a.id === id)
+```js
+state: { comments: { [articleSlug]: [...] } }
+actions: {
+  loadComments(articleSlug, sort)
+  addComment(articleSlug, content, parentId)
+  updateComment(commentId, content)
+  deleteComment(commentId)
+  batchDeleteComments(ids)
+  permanentDeleteComment(commentId)
+  toggleSticky(commentId)
+  likeComment(commentId)
 }
-
-// 文章列表（支持分页、筛选、排序）
-function getArticles({ page = 1, tag, search } = {}) {
-  // 客户端分页和筛选
-}
-```
-
-### 5. 工具页面
-- 外部工具链接卡片网格
-- 每个工具：图标 + 名称 + 描述 + 外部链接（_blank打开）
-- 支持按类别筛选
-
-### 6. 联系页面
-- 表单字段：姓名、邮箱、主题、消息
-- 前端验证：必填、邮箱格式
-- 提交处理：模拟网络请求（setTimeout）→ 显示成功提示
-- 无真实数据发送
-
-### 7. JavaScript动效实现
-
-#### 7.1 首页文章轮播图
-- **功能**：自动轮播（每5秒切换）+ 手动切换（左右箭头/指示点）
-- **技术实现**：
-  ```javascript
-  // 使用Swiper.js或自定义Carousel组件
-  // 轮播数据：推荐文章列表（从文章数据中筛选）
-  // 自动轮播：setInterval + 清除机制（页面不可见时暂停）
-  // 响应式：不同屏幕尺寸显示不同数量的幻灯片
-  ```
-- **动效**：淡入淡出/滑动过渡，CSS transition实现
-
-#### 7.2 点击跳到页面顶端
-- **功能**：滚动超过300px显示"回到顶部"按钮，点击平滑滚动到顶部
-- **技术实现**：
-  ```javascript
-  // 监听scroll事件，显示/隐藏按钮（防抖优化）
-  // 点击按钮：window.scrollTo({ top: 0, behavior: 'smooth' })
-  // 按钮样式：固定定位在右下角，渐现/渐隐过渡
-  ```
-- **动效**：按钮出现/消失的透明度变化，平滑滚动
-
-#### 7.3 动态数据展示
-- **功能**：实时评论计数、文章阅读量动画（数字递增效果）
-- **技术实现**：
-  ```javascript
-  // 数字动画：使用requestAnimationFrame实现数字递增效果
-  // 评论计数：监听评论store变化，更新显示
-  // 阅读量模拟：文章打开时阅读数+1（本地存储）
-  ```
-- **动效**：数字滚动效果，CSS计数器动画
-
-#### 7.4 动态数据校验（登录表单）
-- **功能**：实时验证用户名/密码格式，即时反馈
-- **技术实现**：
-  ```javascript
-  // 表单字段绑定 + watch监听
-  // 验证规则：用户名长度3-20，密码强度提示
-  // 视觉反馈：验证通过/失败图标，错误提示信息
-  // 防抖验证：输入后500ms触发验证，避免频繁验证
-  ```
-- **动效**：验证状态变化的颜色过渡，错误提示的滑入效果
-
-#### 7.5 其他动效增强
-- **页面切换过渡**：Vue Router的页面切换动画（淡入淡出）
-- **悬停效果**：卡片悬停上浮、按钮波纹效果
-- **加载动画**：数据加载时的骨架屏、旋转加载器
-
-## 代码封装与可维护性设计
-
-### 1. 组件封装原则
-- **单一职责**：每个组件只做一件事，保持小巧专注（如`ArticleCard`只展示文章卡片，不处理业务逻辑）
-- **可复用性**：组件通过props接收数据，通过emits发出事件，避免内部状态依赖
-- **无副作用**：纯展示组件不直接修改全局状态，业务逻辑通过composables或store处理
-- **插槽机制**：使用具名插槽和作用域插槽提供扩展点（如`AppLayout`的header、footer插槽）
-- **默认值设计**：提供合理的props默认值，降低使用成本
-
-### 2. 组合式函数（Composables）封装
-- **认证逻辑**：`useAuth()`封装登录、注销、令牌管理、权限检查
-- **评论管理**：`useComments()`封装评论CRUD、本地存储同步
-- **文章数据**：`useArticles()`封装文章加载、筛选、分页
-- **表单处理**：`useForm()`封装表单状态、验证、提交逻辑
-- **动效控制**：`useCarousel()`、`useBackToTop()`封装动效逻辑
-- **规则**：每个composable只关注一个领域，返回响应式状态和方法
-
-### 3. 工具函数模块化
-- **按功能分模块**：
-  - `utils/date.js`：日期格式化、相对时间计算
-  - `utils/string.js`：字符串处理、截断、Markdown清理
-  - `utils/storage.js`：localStorage/IndexedDB封装（统一错误处理）
-  - `utils/validation.js`：表单验证规则、正则表达式
-  - `utils/dom.js`：DOM操作、滚动控制、事件监听封装
-- **纯函数设计**：相同输入总是返回相同输出，无副作用
-- **完整类型提示**：JSDoc注释说明参数、返回值、示例
-
-### 4. 状态管理规范
-- **Store分层**：
-  - `authStore`：用户认证状态、角色、权限
-  - `commentStore`：评论数据、操作
-  - `articleStore`：文章数据、分类、标签
-  - `uiStore`：UI状态（主题、侧边栏开关、加载状态）
-- **Getter计算属性**：派生状态通过getter计算，避免重复逻辑
-- **Action统一处理**：异步操作、错误处理、状态更新在action中完成
-- **持久化策略**：重要状态自动持久化到localStorage（通过插件）
-
-### 5. 常量集中管理
-- **目录结构**：`src/constants/`专门存放常量定义文件
-- **存储键名**：`storage-keys.js`定义所有localStorage键名常量
-  ```javascript
-  export const STORAGE_KEYS = {
-    COMMENTS: 'blog_comments',
-    USERS: 'blog_users',
-    AUTH_TOKEN: 'auth_token',
-    THEME: 'blog_theme'
-  }
-  ```
-- **路由路径**：`routes.js`定义所有路由路径常量，避免硬编码字符串
-  ```javascript
-  export const ROUTES = {
-    HOME: '/',
-    ARTICLE: '/article/:id',
-    LOGIN: '/login',
-    // ...
-  }
-  ```
-- **API端点**：`api.js`定义模拟API端点常量（虽无真实后端，但统一管理）
-- **正则表达式**：`regex.js`集中所有验证正则（邮箱、用户名、密码强度）
-- **样式常量**：`theme.js`定义CSS变量、颜色、间距、字体等
-- **使用规范**：禁止在业务代码中直接使用字符串/数字字面量，必须引用常量
-
-### 6. 配置外部化
-- **环境配置**：`src/config/env.js`区分开发/生产环境API地址、功能开关
-- **主题配置**：`src/config/theme.js`定义颜色、间距、断点，Element Plus主题覆盖
-- **路由配置**：`src/router/routes.js`集中定义所有路由，meta信息标注权限
-- **静态数据**：`src/data/`目录存放文章、工具链接等可配置数据
-
-### 7. 错误处理与日志
-- **统一错误边界**：`ErrorBoundary`组件捕获子组件错误，显示友好界面
-- **API错误处理**：虽然无真实API，但模拟网络错误的统一处理模式
-- **用户操作反馈**：成功/失败消息通过ElMessage统一显示
-- **开发日志**：`debug`模块控制日志输出，生产环境自动关闭
-
-### 8. 代码分割与性能
-- **路由懒加载**：所有路由组件使用`() => import()`动态导入
-- **组件异步加载**：大型组件（如富文本编辑器）按需加载
-- **第三方库CDN**：非核心库（如chart.js）通过CDN引入，减小打包体积
-- **图片优化**：WebP格式、懒加载、响应式图片srcset
-
-### 9. 文档与注释
-- **组件文档**：每个组件顶部使用JSDoc说明用途、props、slots、events
-- **复杂逻辑注释**：算法、业务规则关键步骤添加注释
-- **README驱动**：`README.md`包含项目结构、开发指南、部署步骤
-- **变更日志**：`CHANGELOG.md`记录版本更新
-
-### 10. 可扩展性设计
-- **插件机制**：预留插件注册点，未来可添加新功能模块
-- **主题系统**：CSS变量实现主题切换，支持暗黑模式
-- **国际化准备**：文本内容通过`$t`函数调用，预留多语言结构
-- **API抽象层**：虽然当前模拟，但网络请求封装为`api/`模块，便于未来接入真实后端
-
-## 组件设计
-
-### 核心组件清单
-1. **AppLayout**：主布局（Header + Main + Footer）
-2. **ArticleCard**：文章卡片（用于首页列表）
-3. **CommentList**：评论列表展示
-4. **CommentForm**：评论提交表单
-5. **MarkdownRenderer**：Markdown内容渲染器
-6. **TagCloud**：标签云组件
-7. **ToolCard**：工具链接卡片
-8. **ContactForm**：联系表单
-9. **AuthGuard**：路由守卫包装组件
-10. **AdminPanel**：Admin管理面板（清空评论等）
-11. **Carousel**：首页轮播图组件（自动/手动切换）
-12. **BackToTop**：回到顶部按钮（滚动显示/隐藏，平滑滚动）
-13. **CounterAnimation**：数字动画组件（阅读量、评论数递增效果）
-14. **FormValidator**：表单实时验证组件（视觉反馈）
-15. **LoadingSkeleton**：骨架屏加载组件（文章列表、详情页）
-16. **SearchBox**：搜索框组件（实时搜索建议）
-17. **Pagination**：分页组件（文章列表分页）
-18. **CategoryFilter**：分类筛选组件（标签/分类过滤）
-
-### Element Plus集成
-- 按需导入配置（unplugin-vue-components）
-- 主题色自定义（主色、成功色、警告色等）
-- 响应式断点适配
-- 全局组件注册（ElButton、ElInput等常用组件）
-
-## 构建与部署
-
-### 开发环境
-```bash
-# 安装依赖
-npm install
-
-# 开发服务器
-npm run dev
-
-# 代码检查
-npm run lint
-
-# 格式化
-npm run format
-```
-
-### 生产构建
-```bash
-# 构建静态文件（输出到dist目录）
-npm run build
-
-# 预览构建结果
-npm run preview
-```
-
-### GitHub Pages部署流程
-1. 构建：`npm run build`
-2. 进入dist目录：`cd dist`
-3. 初始化Git仓库（如需要）
-4. 添加文件并提交
-5. 推送到gh-pages分支：`git push origin gh-pages`
-6. 在GitHub仓库Settings → Pages中设置源分支
-
-### 构建优化
-- **代码分割**：路由级懒加载
-- **资源压缩**：Vite默认开启
-- **图片优化**：建议手动压缩，或使用image-webpack-loader
-- **CDN配置**：Element Plus等库可配置CDN引入（减少打包体积）
-
-## 开发规范
-
-### 代码风格
-- 使用Composition API + `<script setup>`语法
-- 组件名使用PascalCase（如`ArticleCard.vue`）
-- 变量/函数名使用camelCase
-- CSS类名使用kebab-case
-- 优先使用Element Plus组件，自定义样式需加命名空间（如`.blog-article`）
-
-### 提交规范（可选）
-```
-feat: 新功能
-fix: 修复bug
-docs: 文档更新
-style: 代码格式调整
-refactor: 代码重构
-test: 测试相关
-chore: 构建/工具更新
-```
-
-### 性能注意事项
-1. **文章图片**：使用懒加载（`loading="lazy"`）
-2. **评论列表**：虚拟滚动（如文章评论过多）
-3. **状态持久化**：localStorage操作需防抖/节流
-4. **构建产物**：监控打包体积，避免单文件过大
-
-## 风险与限制
-
-### 技术限制
-1. **数据不共享**：评论、用户数据仅限当前浏览器
-2. **无真实安全**：密码硬编码，JWT模拟，无服务器验证
-3. **无法扩展**：无法添加真实用户、真实评论审核
-4. **SEO有限**：动态内容（评论）不被搜索引擎收录
-
-### 安全警告
-⚠️ **重要**：此项目仅为演示用途，不适合生产环境！
-- 密码暴露在前端代码中
-- 无防暴力破解机制
-- 无XSS/CSRF防护（评论内容直接显示）
-- 管理功能仅在本地有效
-
-### 维护考虑
-- 文章更新需重新构建部署
-- 无备份机制（localStorage可被用户清除）
-- 浏览器兼容性：现代浏览器（Chrome 90+, Firefox 88+, Safari 14+）
-
-## 未来扩展点（如改为真实应用）
-1. **后端API**：Node.js/Express或Python FastAPI
-2. **数据库**：MongoDB/PostgreSQL/MySQL
-3. **真实认证**：JWT + bcrypt密码哈希
-4. **评论审核**：Admin后台审核队列
-5. **数据导入导出**：JSON/CSV文件处理
-6. **邮件通知**：新评论通知、联系表单转发
-7. **数据分析**：访问统计、热门文章
-
-## 验收标准
-### 基础功能
-- [ ] 14个页面均可正常访问（满足12+要求）
-- [ ] 至少3级页面深度（首页 → 文章列表 → 文章详情）
-- [ ] 5种以上不同布局（首页、详情、工具、用户中心、管理后台等）
-- [ ] 文章列表/详情可正常显示（Markdown渲染）
-- [ ] 登录/注销功能正常（硬编码账号，角色区分）
-- [ ] 评论可提交/显示（当前浏览器内）
-- [ ] Admin可看到管理入口并管理本地数据
-- [ ] 工具页面链接正常跳转（外部链接）
-- [ ] 联系表单模拟提交成功（验证+提示）
-- [ ] 响应式设计（桌面/平板/手机）
-
-### JavaScript动效（2+要求）
-- [ ] 首页文章轮播图（自动轮播+手动切换）
-- [ ] 点击跳到页面顶端按钮（滚动显示/隐藏，平滑滚动）
-- [ ] 动态数据展示（阅读量/评论数动画）
-- [ ] 动态数据校验（登录表单实时验证）
-- [ ] 页面切换过渡动画（Vue Router）
-- [ ] 悬停交互效果（卡片上浮、按钮波纹）
-
-### CSS规范
-- [ ] HTML与CSS代码分离（Vue单文件组件`<style>`）
-- [ ] 无行内样式（`style`属性）和内联样式
-- [ ] 使用CSS预处理器（Sass/Scss可选）
-- [ ] 符合BEM或前缀命名规范
-- [ ] 响应式媒体查询完整
-
-### LOGO与设计
-- [ ] 使用Photoshop自行设计LOGO（非AI生成）
-- [ ] LOGO出现在Header和Favicon
-- [ ] 提供PSD源文件及导出格式（PNG、SVG）
-- [ ] 界面美观、内容充实
-
-### 部署与质量
-- [ ] 部署到GitHub Pages可访问
-- [ ] 无浏览器console错误
-- [ ] ESLint代码规范检查通过
-- [ ] 构建产物优化（压缩、代码分割）
-
-## 附录
-
-### 硬编码用户账号（示例）
-| 用户名 | 密码 | 角色 | 用途 |
-|--------|------|------|------|
-| admin | admin123 | admin | 管理员演示 |
-| user1 | user123 | user | 普通用户演示 |
-| user2 | user456 | user | 普通用户演示 |
-
-### 文章目录结构示例
-```
-content/
-├── articles/
-│   ├── 2023-10-01-hello-world.md
-│   ├── 2023-10-05-vue3-tips.md
-│   └── 2023-10-10-element-plus-guide.md
-└── config.json     # 站点配置（标题、描述等）
-```
-
-### 构建脚本示例（package.json）
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs",
-    "format": "prettier --write src/",
-    "build:content": "node scripts/build-content.js"
-  }
+getters: {
+  getCommentTree(articleSlug)    // 构建嵌套评论树
 }
 ```
 
 ---
-*文档版本：1.0*
-*最后更新：2026-04-12*
-*项目类型：演示/原型*
-*技术栈：Vue 3 + Element Plus + Vite*
+
+## 9. 认证与授权
+
+### 9.1 JWT 流程
+
+```
+注册/登录 → 后端生成 JWT（含 userId, username, role, 7天过期）
+         → 前端存入 localStorage
+         → Axios 拦截器自动附加 Authorization: Bearer <token>
+         → 后端中间件验证 token，注入 req.user
+         → 管理员接口额外校验 role === 'admin'
+```
+
+### 9.2 权限矩阵
+
+| 操作 | 游客 | 注册用户 | 管理员 |
+|------|------|----------|--------|
+| 阅读文章 | ✓ | ✓ | ✓ |
+| 发表评论 | ✗ | ✓ | ✓ |
+| 编辑评论 | ✗ | 仅自己 | ✓ |
+| 删除评论 | ✗ | 仅自己（软删） | ✓（永久删） |
+| 点赞/收藏 | ✗ | ✓ | ✓ |
+| 访问管理后台 | ✗ | ✗ | ✓ |
+| 管理内容 | ✗ | ✗ | ✓ |
+| 提交联系表单 | ✗ | ✓（10次/天） | ✓ |
+
+---
+
+## 10. 安全措施
+
+| 措施 | 实现 |
+|------|------|
+| 密码存储 | bcryptjs 加盐哈希（10 轮） |
+| 传输安全 | JWT 令牌 + HTTPS + TiDB TLS 连接 |
+| 跨域控制 | CORS 白名单（GitHub Pages + localhost） |
+| 接口鉴权 | requireAuthMw / requireAdminMw 中间件 |
+| 路由守卫 | Vue Router beforeEach 钩子检查 meta.requiresAuth/Admin |
+| SQL 注入防护 | 参数化查询（mysql2 prepared statements） |
+| 频率限制 | 联系表单 10 次/天/用户 |
+| 敏感信息 | .env 文件 Git 忽略，JWT_SECRET 环境变量注入 |
+
+---
+
+## 11. 部署配置
+
+### 11.1 前端部署（GitHub Pages）
+
+```bash
+npm run deploy
+# 等价于: VITE_API_BASE=<API_URL> VITE_BASE=/myBlog/ vite build && gh-pages -d dist
+```
+
+- 构建输出目录：`dist/`
+- 部署目标：GitHub Pages `https://pikachuprogrammer01.github.io/myBlog/`
+- SPA 回退：`public/404.html` 将原始路径写入 `sessionStorage` 后重定向到首页
+
+### 11.2 后端部署（Vercel）
+
+- 构建配置：`vercel.json` → `api/index.js` = `require('./app')`
+- 路由规则：`/api/(.*)` → API 函数，`/(.*)` → `dist/` 静态文件
+- 环境变量：`JWT_SECRET`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `SMTP_*`
+
+---
+
+## 12. 构建与开发
+
+### 12.1 开发命令
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 启动 Vite 开发服务器（:5173） |
+| `npm run build` | 生产构建 |
+| `npm run preview` | 预览生产构建 |
+| `npm run build:content` | Markdown 文章 → JSON 数据 |
+| `npm run test` | 运行 Vitest 测试 |
+| `npm run lint` | ESLint 检查 |
+| `npm run format` | Prettier 格式化 |
+| `npm run health-check` | 项目健康检查 |
+
+### 12.2 环境变量
+
+**前端**（`.env.development` / `.env.production`）：
+- `VITE_API_BASE` — API 后端地址
+- `VITE_BASE` — 前端基础路径（GitHub Pages 为 `/myBlog/`）
+
+**后端**（`api/.env`，不提交 Git）：
+- `JWT_SECRET` — JWT 签名密钥
+- `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` — 数据库连接
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` — 邮件发送
+
+### 12.3 Vite 构建优化
+
+- Element Plus 自动按需导入（`unplugin-vue-components`）
+- 手动代码分割：`vendor-echarts`, `vendor-xlsx`, `vendor`
+- 路由懒加载（所有页面组件动态 import）
+
+---
+
+## 13. 测试策略
+
+| 层级 | 工具 | 覆盖范围 |
+|------|------|----------|
+| 单元测试 | Vitest + jsdom | Pinia stores, 工具函数 |
+| 组件测试 | @vue/test-utils | Carousel 等核心组件 |
+| 健康检查 | check-health.js | 关键文件完整性 |
+
+测试文件：
+- `src/stores/__tests__/auth.test.js` — 登录/注册/登出流程
+- `src/components/__tests__/Carousel.test.js` — 轮播组件行为
