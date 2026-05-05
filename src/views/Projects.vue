@@ -22,11 +22,13 @@
 
     <!-- 项目列表 -->
     <div v-if="filteredProjects.length > 0" class="projects-grid">
-      <div
+      <a
         v-for="project in filteredProjects"
         :key="project.id || project.name"
+        :href="project.url"
+        target="_blank"
+        rel="noopener noreferrer"
         class="project-card"
-        @click="openProject(project.url)"
       >
         <!-- 左侧状态条 -->
         <div class="status-bar"></div>
@@ -48,7 +50,7 @@
             <span class="hex-id">0x{{ projectHexId(project) }}</span>
           </div>
         </div>
-      </div>
+      </a>
     </div>
 
     <!-- 空状态 -->
@@ -100,10 +102,6 @@ const projectHexId = (project) => {
     hash |= 0;
   }
   return Math.abs(hash).toString(16).toUpperCase().padStart(4, "0").slice(0, 4);
-};
-
-const openProject = (url) => {
-  window.open(url, "_blank", "noopener");
 };
 
 onMounted(async () => {
@@ -219,6 +217,8 @@ $link-blue: #58a6ff;
     overflow: hidden;
     transition: all 0.15s ease;
     display: flex;
+    text-decoration: none;
+    color: inherit;
 
     &:hover {
       transform: translate(2px, 2px);
