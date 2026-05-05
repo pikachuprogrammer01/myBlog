@@ -420,7 +420,7 @@ watch(() => props.pageSize, (newSize) => {
 
         &.active {
           background: var(--blog-primary-color);
-          color: white;
+          color: #0d0f11;
           border-color: var(--blog-primary-color);
         }
       }

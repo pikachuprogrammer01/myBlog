@@ -39,7 +39,6 @@
     <el-table
       ref="tableRef"
       :data="filteredComments"
-      stripe
       v-loading="loading"
       style="width: 100%"
       @sort-change="handleSortChange"

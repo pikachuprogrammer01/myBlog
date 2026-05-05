@@ -18,7 +18,6 @@
 
     <el-table
       :data="filteredArticles"
-      stripe
       style="width: 100%"
       @sort-change="handleSortChange"
       :default-sort="{ prop: 'view_count', order: 'descending' }"

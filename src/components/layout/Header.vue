@@ -1,49 +1,48 @@
 <template>
   <header :class="['blog-header', { 'is-scrolled': isScrolled }]">
     <div class="header-content">
+      <!-- 左侧 Logo -->
       <div class="header-left" @click="router.push('/')">
-        <div class="logo-circle">
-          <img src="/favicon.ico" alt="LOGO" class="logo-img" />
-        </div>
-        <span class="logo-text">wushu<span>Blog</span></span>
+        <span class="logo-bracket">[</span>
+        <span class="logo-text">myBlog</span>
+        <span class="logo-cursor">_</span>
+        <span class="logo-bracket">]</span>
       </div>
 
+      <!-- 中间导航 -->
       <nav class="header-center">
         <router-link to="/" class="nav-link">
-          <el-icon><HomeFilled /></el-icon> 首页
+          <span class="nav-bracket">[</span> 首页 <span class="nav-bracket">]</span>
         </router-link>
         <router-link to="/archive" class="nav-link">
-          <el-icon><Folder /></el-icon> 归档
+          <span class="nav-bracket">[</span> 归档 <span class="nav-bracket">]</span>
         </router-link>
         <router-link to="/categories" class="nav-link">
-          <el-icon><Folder /></el-icon>
-          文章分类
+          <span class="nav-bracket">[</span> 分类 <span class="nav-bracket">]</span>
+        </router-link>
+        <router-link to="/projects" class="nav-link">
+          <span class="nav-bracket">[</span> 项目 <span class="nav-bracket">]</span>
         </router-link>
         <router-link to="/tags" class="nav-link">
-          <el-icon><PriceTag /></el-icon> 标签
+          <span class="nav-bracket">[</span> 标签 <span class="nav-bracket">]</span>
         </router-link>
 
         <el-dropdown trigger="hover" @command="handleMoreCommand">
           <span class="nav-link more-link">
-            <el-icon><MoreFilled /></el-icon> 更多
+            <span class="nav-bracket">[</span> 更多 <span class="nav-bracket">]</span>
             <el-icon><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="tools" :icon="Tools">
-                实用工具
-              </el-dropdown-item>
-              <el-dropdown-item command="interview" :icon="Notebook">
-                面试题库
-              </el-dropdown-item>
-              <el-dropdown-item command="about" :icon="User">
-                关于我
-              </el-dropdown-item>
+              <el-dropdown-item command="tools">> 实用工具</el-dropdown-item>
+              <el-dropdown-item command="interview">> 面试题库</el-dropdown-item>
+              <el-dropdown-item command="about">> 关于我</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
       </nav>
 
+      <!-- 右侧功能区 -->
       <div class="header-right">
         <div class="search-box">
           <el-input
@@ -65,37 +64,26 @@
                 circle
                 :icon="Monitor"
                 @click="router.push('/admin')"
-                class="write-btn"
               />
             </el-tooltip>
 
             <el-dropdown @command="handleUserCommand" trigger="click">
               <div class="user-info-trigger">
-                <el-avatar :size="36" :src="userAvatar" />
+                <el-avatar :size="32" :src="userAvatar" />
+                <span class="user-name">{{ currentUser?.username }}</span>
                 <el-icon><ArrowDown /></el-icon>
               </div>
               <template #dropdown>
-                <el-dropdown-menu class="user-dropdown">
+                <el-dropdown-menu>
                   <div class="dropdown-user-header">
                     <p class="name">{{ currentUser?.username }}</p>
                     <p class="role">{{ isAdmin ? "管理员" : "普通用户" }}</p>
                   </div>
-                  <el-dropdown-item command="profile" :icon="User"
-                    >个人中心</el-dropdown-item
-                  >
-                  <el-dropdown-item command="bookmarks" :icon="CollectionTag"
-                    >我的收藏</el-dropdown-item
-                  >
-                  <el-dropdown-item v-if="isAdmin" command="admin" :icon="Tools"
-                    >管理后台</el-dropdown-item
-                  >
-                  <el-dropdown-item
-                    divided
-                    command="logout"
-                    :icon="SwitchButton"
-                    class="logout-item"
-                  >
-                    退出登录
+                  <el-dropdown-item command="profile">> 个人中心</el-dropdown-item>
+                  <el-dropdown-item command="bookmarks">> 我的收藏</el-dropdown-item>
+                  <el-dropdown-item v-if="isAdmin" command="admin">> 管理后台</el-dropdown-item>
+                  <el-dropdown-item divided command="logout" class="logout-item">
+                    > 退出登录
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -103,298 +91,304 @@
           </template>
 
           <template v-else>
-            <el-button link @click="router.push('/login')">登录</el-button>
-            <el-button type="primary" round @click="router.push('/register')"
-              >注册</el-button
-            >
+            <router-link to="/login" class="nav-link">[ 登录 ]</router-link>
+            <router-link to="/register" class="nav-link accent">[ 注册 ]</router-link>
           </template>
         </div>
+
+        <!-- 状态指示灯 -->
+        <span class="status-indicator">状态: 运行中</span>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, onUnmounted } from "vue";
-  import { useRouter } from "vue-router";
-  import { ElMessage, ElMessageBox } from "element-plus";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
+import {
+  Search,
+  ArrowDown,
+  SwitchButton,
+  Monitor,
+} from "@element-plus/icons-vue";
+import { useAuth } from "@/composables/useAuth";
 
-  import {
-    HomeFilled,
-    Folder,
-    PriceTag,
-    User,
-    Tools,
-    Search,
-    ArrowDown,
-    SwitchButton,
-    Monitor,
-    CollectionTag,
-    Notebook,
-    MoreFilled,
-  } from "@element-plus/icons-vue";
-  import { useAuth } from "@/composables/useAuth";
+const router = useRouter();
+const { currentUser, logout: authLogout, isAuthenticated, isAdmin } = useAuth();
 
-  const router = useRouter();
-  const {
-    currentUser,
-    logout: authLogout,
-    isAuthenticated,
-    isAdmin,
-  } = useAuth();
+const searchQuery = ref("");
 
-  const searchQuery = ref("");
+const userAvatar = computed(() => {
+  if (!currentUser.value) return "";
+  if (currentUser.value.avatarUrl) return currentUser.value.avatarUrl;
+  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${currentUser.value.username}`;
+});
 
-  // 用户头像
-  const userAvatar = computed(() => {
-    if (!currentUser.value) return "";
-    if (currentUser.value.avatarUrl) return currentUser.value.avatarUrl;
-    return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${currentUser.value.username}`;
-  });
+const handleSearch = () => {
+  if (!searchQuery.value.trim()) {
+    ElMessage.warning("请输入搜索关键词");
+    return;
+  }
+  router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
+  searchQuery.value = "";
+};
 
-  // 搜索处理
-  const handleSearch = () => {
-    if (!searchQuery.value.trim()) {
-      ElMessage.warning("请输入搜索关键词");
-      return;
-    }
-    router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`);
-    searchQuery.value = "";
-  };
+const handleUserCommand = (command) => {
+  switch (command) {
+    case "profile": router.push("/profile"); break;
+    case "bookmarks": router.push("/bookmarks"); break;
+    case "admin": router.push("/admin"); break;
+    case "logout": handleLogout(); break;
+  }
+};
 
-  // 用户菜单命令处理
-  const handleUserCommand = (command) => {
-    switch (command) {
-      case "profile":
-        router.push("/profile");
-        break;
-      case "bookmarks":
-        router.push("/bookmarks");
-        break;
-      case "admin":
-        router.push("/admin");
-        break;
-      case "logout":
-        handleLogout();
-        break;
-    }
-  };
+const handleMoreCommand = (command) => {
+  switch (command) {
+    case "tools": router.push("/tools"); break;
+    case "interview": router.push("/interview"); break;
+    case "about": router.push("/about"); break;
+  }
+};
 
-  // 更多菜单命令处理
-  const handleMoreCommand = (command) => {
-    switch (command) {
-      case "tools":
-        router.push("/tools");
-        break;
-      case "interview":
-        router.push("/interview");
-        break;
-      case "about":
-        router.push("/about");
-        break;
-    }
-  };
-
-  // 退出登录
-  const handleLogout = () => {
-    ElMessageBox.confirm("确定要退出登录吗？", "退出确认", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
+const handleLogout = () => {
+  ElMessageBox.confirm("确定要退出登录吗？", "退出确认", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
+    .then(() => {
+      authLogout();
+      ElMessage.success("已退出登录");
+      router.push("/login");
     })
-      .then(() => {
-        authLogout();
-        ElMessage.success("已退出登录");
-        router.push("/login");
-      })
-      .catch(() => {});
-  };
+    .catch(() => {});
+};
 
-  const isScrolled = ref(false);
+const isScrolled = ref(false);
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 20;
+};
 
-  const handleScroll = () => {
-    isScrolled.value = window.scrollY > 20;
-  };
-
-  onMounted(() => {
-    window.addEventListener("scroll", handleScroll);
-  });
-
-  onUnmounted(() => {
-    window.removeEventListener("scroll", handleScroll);
-  });
+onMounted(() => window.addEventListener("scroll", handleScroll));
+onUnmounted(() => window.removeEventListener("scroll", handleScroll));
 </script>
 
 <style scoped lang="scss">
-  .blog-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 70px;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(15px);
-    z-index: 1000;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+$bg-header: rgba(13, 15, 17, 0.8);
+$border-color: #30363d;
+$accent-gold: #f2c94c;
+$text-bright: #e6edf3;
+$text-muted: #8b949e;
+$monitor-green: #3fb950;
 
-    &.is-scrolled {
-      height: 60px;
-      background: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+.blog-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: $bg-header;
+  backdrop-filter: blur(12px);
+  z-index: 1000;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(242, 201, 76, 0.3);
+
+  &.is-scrolled {
+    height: 56px;
+    background: rgba(13, 15, 17, 0.95);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .header-content {
+    max-width: 1200px;
+    height: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  // 左侧 Logo — 等宽字体模拟代码行
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    font-family: "Courier New", "Source Code Pro", monospace;
+    font-size: 18px;
+
+    .logo-bracket {
+      color: $text-muted;
     }
 
-    .header-content {
-      max-width: 1200px;
-      height: 100%;
-      margin: 0 auto;
-      padding: 0 20px;
+    .logo-text {
+      color: $accent-gold;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .logo-cursor {
+      color: $accent-gold;
+      animation: cursor-blink 1s step-end infinite;
+    }
+  }
+
+  // 中间导航 — 开关式矩形边框
+  .header-center {
+    display: flex;
+    gap: 4px;
+
+    .nav-link {
+      text-decoration: none;
+      color: $text-muted;
+      font-family: "Courier New", "Source Code Pro", monospace;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 2px;
+      padding: 6px 12px;
+      border: 1px solid transparent;
+      transition: all 0.1s ease;
+
+      .nav-bracket {
+        color: $border-color;
+        font-size: 11px;
+      }
+
+      &:hover,
+      &.router-link-active {
+        color: $accent-gold;
+        border-color: $accent-gold;
+        background: rgba(242, 201, 76, 0.05);
+
+        .nav-bracket {
+          color: $accent-gold;
+        }
+      }
     }
 
-    // 左侧 Logo
-    .header-left {
+    .more-link {
+      cursor: pointer;
+    }
+  }
+
+  // 右侧功能区
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .search-input {
+      width: 180px;
+
+      :deep(.el-input__wrapper) {
+        background: rgba(255, 255, 255, 0.04) !important;
+        border-color: $border-color !important;
+        height: 32px;
+        font-size: 12px;
+      }
+    }
+
+    .auth-zone {
       display: flex;
       align-items: center;
       gap: 12px;
-      cursor: pointer;
-
-      .logo-circle {
-        width: 36px;
-        height: 36px;
-        background: linear-gradient(135deg, var(--el-color-primary), #67c23a);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 20px;
-
-        .logo-img {
-          width: 30px;
-          height: 30px;
-        }
-      }
-
-      .logo-text {
-        font-size: 20px;
-        font-weight: 800;
-        color: #303133;
-        letter-spacing: -0.5px;
-        span {
-          color: var(--el-color-primary);
-        }
-      }
-    }
-
-    // 中间 导航
-    .header-center {
-      display: flex;
-      gap: 25px;
 
       .nav-link {
         text-decoration: none;
-        color: #606266;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        transition: all 0.2s;
-        font-size: 15px;
+        color: $text-muted;
+        font-family: "Courier New", monospace;
+        font-size: 11px;
+        letter-spacing: 1px;
+        padding: 4px 8px;
+        border: 1px solid transparent;
+        transition: all 0.1s ease;
 
-        &:hover,
-        &.router-link-active {
-          color: var(--el-color-primary);
+        &:hover {
+          color: $accent-gold;
+          border-color: $accent-gold;
         }
 
-        .el-icon {
-          font-size: 17px;
+        &.accent {
+          color: $accent-gold;
+          border-color: rgba(242, 201, 76, 0.3);
+
+          &:hover {
+            background: rgba(242, 201, 76, 0.08);
+          }
         }
       }
 
-      .more-link {
+      .user-info-trigger {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         cursor: pointer;
 
-        .el-icon:last-child {
+        .user-name {
+          font-family: "Courier New", monospace;
           font-size: 12px;
+          color: $text-muted;
         }
       }
     }
 
-    // 右侧 功能区
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-
-      .search-input {
-        :deep(.el-input__wrapper) {
-          border-radius: 20px;
-          background: rgba(0, 0, 0, 0.04);
-          box-shadow: none !important;
-          border: 1px solid transparent;
-          transition: all 0.3s;
-          &:hover,
-          &.is-focus {
-            border-color: var(--el-color-primary-light-5);
-            background: white;
-          }
-        }
-      }
-
-      .auth-zone {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-
-        .user-info-trigger {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          cursor: pointer;
-          padding: 4px;
-          border-radius: 20px;
-          transition: background 0.3s;
-          &:hover {
-            background: rgba(0, 0, 0, 0.05);
-          }
-        }
-      }
+    .status-indicator {
+      font-family: "Courier New", monospace;
+      font-size: 10px;
+      color: $monitor-green;
+      letter-spacing: 1px;
+      opacity: 0.7;
     }
   }
+}
 
-  // 下拉菜单增强
-  .user-dropdown {
-    padding: 8px;
-    .dropdown-user-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid #f0f0f0;
-      margin-bottom: 8px;
-      .name {
-        font-weight: bold;
-        font-size: 14px;
-        margin: 0;
-      }
-      .role {
-        font-size: 12px;
-        color: #999;
-        margin: 4px 0 0;
-      }
-    }
-    .logout-item {
-      color: var(--el-color-danger);
-    }
+// 下拉菜单
+.dropdown-user-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid $border-color;
+  margin-bottom: 4px;
+
+  .name {
+    font-weight: 700;
+    font-size: 13px;
+    margin: 0;
+    color: $text-bright;
+    font-family: "Courier New", monospace;
   }
 
-  // 移动端适配处理（隐藏中间导航，缩短搜索框）
-  @media (max-width: 992px) {
-    .header-center {
-      display: none;
-    }
-    .search-box {
-      display: none;
-    } // 移动端建议使用你原有的 showSearchDialog
+  .role {
+    font-size: 11px;
+    color: $accent-gold;
+    margin: 2px 0 0;
+    font-family: "Courier New", monospace;
   }
+}
+
+.logout-item {
+  color: #f85149 !important;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+// 响应式
+@media (max-width: 992px) {
+  .header-center {
+    display: none !important;
+  }
+  .search-box {
+    display: none !important;
+  }
+  .status-indicator {
+    display: none !important;
+  }
+}
 </style>

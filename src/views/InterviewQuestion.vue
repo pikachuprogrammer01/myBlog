@@ -159,7 +159,7 @@
               <div class="comment-body">
                 <div class="comment-top">
                   <span class="comment-username">{{ c.username }}</span>
-                  <el-tag v-if="c.user_role === 'admin'" size="mini" type="danger">管理员</el-tag>
+                  <el-tag v-if="c.user_role === 'admin'" size="small" type="danger">管理员</el-tag>
                   <span class="comment-time">{{ formatTime(c.created_at) }}</span>
                 </div>
                 <div class="comment-text">{{ c.content }}</div>
@@ -205,7 +205,7 @@
                     <div class="reply-body">
                       <div class="reply-top">
                         <span class="reply-username">{{ r.username }}</span>
-                        <el-tag v-if="r.user_role === 'admin'" size="mini" type="danger">管理员</el-tag>
+                        <el-tag v-if="r.user_role === 'admin'" size="small" type="danger">管理员</el-tag>
                         <span class="reply-time">{{ formatTime(r.created_at) }}</span>
                       </div>
                       <div class="reply-text">{{ r.content }}</div>

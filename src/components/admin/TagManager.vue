@@ -20,7 +20,7 @@
       <span class="tag-count">找到 {{ filteredTags.length }} / 共 {{ tags.length }} 个标签</span>
     </div>
 
-    <el-table :data="pagedTags" stripe class="tag-table">
+    <el-table :data="pagedTags" class="tag-table">
       <el-table-column prop="name" label="标签名称" min-width="150">
         <template #default="{ row }">
           <span v-if="editingId !== row.id">{{ row.name }}</span>
@@ -68,9 +68,11 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, inject } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import { getTags, createTag, updateTag, deleteTag } from "@/api/services/adminService";
+import { errMsg } from "@/utils/error";
+import { confirmThen } from "@/utils/confirm";
 import { removeCache } from "@/utils/cache";
 import { STORAGE_KEYS } from "@/constants/storage-keys";
 import { useArticles } from "@/composables/useArticles";
@@ -99,11 +101,6 @@ const pagedTags = computed(() => {
   return filteredTags.value.slice(start, start + pageSize.value);
 });
 
-const confirmBase = {
-  appendTo: "#app",
-  lockScroll: false,
-};
-
 const { invalidateCache } = useArticles();
 const refreshAdminData = inject('refreshAdminData', null);
 
@@ -114,7 +111,7 @@ async function loadTags() {
       tags.value = res.data.data;
     }
   } catch (error) {
-    ElMessage.error("加载标签失败: " + (error.response?.data?.message || error.message));
+    ElMessage.error("加载标签失败: " + errMsg(error));
   }
 }
 
@@ -179,28 +176,22 @@ async function handleSave(id) {
 }
 
 function handleDelete(row) {
-  ElMessageBox.confirm(
-    `确定要删除标签「${row.name}」吗？将从所有文章中移除此标签。`,
-    "删除确认",
-    { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning", ...confirmBase }
-  )
-    .then(async () => {
-      try {
-        const res = await deleteTag(row.id);
-        if (res.data.success) {
-          ElMessage.success("标签已删除");
-          removeCache(STORAGE_KEYS.CACHED_ARTICLES);
-          invalidateCache();
-          refreshAdminData?.();
-          await loadTags();
-        } else {
-          ElMessage.error(res.data.message || "删除失败");
-        }
-      } catch (error) {
-        ElMessage.error(error.response?.data?.message || "删除失败");
+  confirmThen(`确定要删除标签「${row.name}」吗？将从所有文章中移除此标签。`, "删除确认", "warning", async () => {
+    try {
+      const res = await deleteTag(row.id);
+      if (res.data.success) {
+        ElMessage.success("标签已删除");
+        removeCache(STORAGE_KEYS.CACHED_ARTICLES);
+        invalidateCache();
+        refreshAdminData?.();
+        await loadTags();
+      } else {
+        ElMessage.error(res.data.message || "删除失败");
       }
-    })
-    .catch(() => {});
+    } catch (error) {
+      ElMessage.error(errMsg(error));
+    }
+  });
 }
 
 watch(searchQuery, () => {

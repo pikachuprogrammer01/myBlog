@@ -578,7 +578,7 @@ onMounted(() => {
         &:hover {
           transform: translateY(-2px);
           background-color: var(--blog-primary-color);
-          color: white;
+          color: #e6edf3;
         }
       }
     }

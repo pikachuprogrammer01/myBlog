@@ -68,7 +68,7 @@
                   <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
                   <el-tag
                     v-if="comment.isAdmin"
-                    size="mini"
+                    size="small"
                     type="danger"
                     class="admin-tag"
                   >
@@ -706,7 +706,7 @@ defineExpose({
 
       &.comment-selected {
         border: 1px solid var(--blog-primary-color);
-        background-color: rgba(var(--blog-primary-rgb), 0.05);
+        background-color: rgba(242, 201, 76, 0.05);
       }
 
       .comment-header {
@@ -752,7 +752,7 @@ defineExpose({
             color: var(--blog-danger-color);
 
             &:hover {
-              color: var(--blog-danger-hover);
+              color: var(--blog-primary-color);
             }
           }
         }
@@ -846,7 +846,7 @@ defineExpose({
               color: var(--blog-warning-color);
 
               &:hover {
-                color: var(--blog-warning-hover);
+                color: var(--blog-primary-color);
               }
             }
           }

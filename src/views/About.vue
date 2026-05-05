@@ -180,7 +180,7 @@
       background: linear-gradient(
         135deg,
         var(--el-color-primary-light-9) 0%,
-        #ffffff 100%
+        #161b22 100%
       );
       border: none;
 
@@ -208,7 +208,7 @@
       }
 
       .avatar-hover {
-        border: 4px solid #fff;
+        border: 2px solid #30363d;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease;
         &:hover {

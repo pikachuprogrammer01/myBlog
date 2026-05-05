@@ -24,7 +24,7 @@
       <span class="item-count">找到 {{ filteredTotal }} / 共 {{ total }} 道题目</span>
     </div>
 
-    <el-table :data="questions" stripe v-loading="loading" class="question-table">
+    <el-table :data="questions" v-loading="loading" class="question-table">
       <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
       <el-table-column prop="category" label="分类" width="100" align="center">
         <template #default="{ row }">
@@ -145,7 +145,9 @@
 
 <script setup>
 import { ref, computed, onMounted, inject } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
+import { errMsg } from "@/utils/error";
+import { confirmThen } from "@/utils/confirm";
 import { Plus, Edit, Delete } from "@element-plus/icons-vue";
 import {
   getAdminInterviewQuestions,
@@ -155,7 +157,6 @@ import {
   deleteInterviewQuestion,
 } from "@/api/services/interviewService";
 
-const confirmBase = { appendTo: "#app", lockScroll: false };
 const refreshAdminData = inject("refreshAdminData", null);
 
 const categories = [
@@ -235,7 +236,7 @@ async function loadQuestions() {
       totalPages.value = res.data.pagination.totalPages;
     }
   } catch (error) {
-    ElMessage.error("加载题目列表失败: " + (error.response?.data?.message || error.message));
+    ElMessage.error("加载题目列表失败: " + errMsg(error));
   } finally {
     loading.value = false;
   }
@@ -272,7 +273,7 @@ async function openDialog(row) {
         };
       }
     } catch (error) {
-      ElMessage.error("加载题目详情失败: " + (error.response?.data?.message || error.message));
+      ElMessage.error("加载题目详情失败: " + errMsg(error));
       return;
     }
   } else {
@@ -316,7 +317,7 @@ async function handleSave() {
     ElMessage.error(
       (editingId.value ? "更新" : "创建") +
         "失败: " +
-        (error.response?.data?.message || error.message)
+        errMsg(error)
     );
   } finally {
     saving.value = false;
@@ -324,27 +325,16 @@ async function handleSave() {
 }
 
 function handleDelete(row) {
-  ElMessageBox.confirm(
-    `确定要删除题目「${row.title}」吗？此操作不可恢复！`,
-    "删除确认",
-    {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-      ...confirmBase,
-    }
-  )
-    .then(async () => {
-      try {
-        await deleteInterviewQuestion(row.id);
-        ElMessage.success("题目已删除");
-        await loadQuestions();
-        refreshAdminData?.();
+  confirmThen(`确定要删除题目「${row.title}」吗？此操作不可恢复！`, "删除确认", "warning", async () => {
+    try {
+      await deleteInterviewQuestion(row.id);
+      ElMessage.success("题目已删除");
+      await loadQuestions();
+      refreshAdminData?.();
       } catch (error) {
-        ElMessage.error("删除失败: " + (error.response?.data?.message || error.message));
+        ElMessage.error(errMsg(error, "删除失败: "));
       }
-    })
-    .catch(() => {});
+  });
 }
 
 defineExpose({ questions });

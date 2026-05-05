@@ -99,6 +99,23 @@ export function deleteTool(id) {
   return client.delete(`/api/admin/tools/${id}`);
 }
 
+// Projects CRUD
+export function getProjects() {
+  return client.get('/api/admin/projects');
+}
+
+export function createProject(data) {
+  return client.post('/api/admin/projects', data);
+}
+
+export function updateProject(id, data) {
+  return client.put(`/api/admin/projects/${id}`, data);
+}
+
+export function deleteProject(id) {
+  return client.delete(`/api/admin/projects/${id}`);
+}
+
 // User CRUD
 export function getAdminUsers(params = {}) {
   return client.get('/api/admin/users', { params });

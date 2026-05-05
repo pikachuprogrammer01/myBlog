@@ -554,31 +554,65 @@
           margin-bottom: 0.5em;
         }
 
-        // 代码块
+        // 代码块 — 工业控制屏风格
         pre {
-          background-color: var(--blog-bg-gray);
-          border-radius: var(--blog-border-radius);
-          padding: var(--blog-spacing-md);
+          background-color: #0a0e11;
+          border: 1px solid #30363d;
+          border-radius: 2px;
+          padding: 36px 16px 16px;
           margin-bottom: 1em;
           overflow-x: auto;
+          position: relative;
+          box-shadow:
+            inset 0 2px 8px rgba(0, 0, 0, 0.5),
+            2px 2px 0px #000;
+
+          // macOS 风格暗色圆点
+          &::before {
+            content: "";
+            position: absolute;
+            top: 12px;
+            left: 16px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4a4a4a;
+            box-shadow:
+              16px 0 0 #4a4a4a,
+              32px 0 0 #4a4a4a;
+          }
+
+          // 右侧滚动条槽模拟工业控制屏
+          &::-webkit-scrollbar {
+            height: 4px;
+          }
+          &::-webkit-scrollbar-track {
+            background: #0a0e11;
+          }
+          &::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 0;
+          }
 
           code {
             background-color: transparent;
             padding: 0;
-            font-family:
-              "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            font-size: 0.9em;
+            font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+            font-size: 0.88em;
+            color: #e6edf3;
+            line-height: 1.6;
           }
         }
 
         // 行内代码
         code {
-          background-color: var(--blog-bg-gray);
+          background-color: #0a0e11;
+          border: 1px solid #30363d;
           padding: 0.2em 0.4em;
-          border-radius: 3px;
-          font-family:
-            "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-          font-size: 0.9em;
+          border-radius: 2px;
+          font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+          font-size: 0.88em;
+          color: #f2c94c;
         }
 
         // 引用块
@@ -659,7 +693,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background-color: white;
+      background-color: #0d0f11;
       padding: var(--blog-spacing-md) 0;
       border-top: 1px solid var(--blog-border-color);
       z-index: 10;

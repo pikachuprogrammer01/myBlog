@@ -30,7 +30,7 @@
       <span class="article-count">共 {{ total }} 篇文章</span>
     </div>
 
-    <el-table :data="articles" stripe v-loading="loading" class="article-table">
+    <el-table :data="articles" v-loading="loading" class="article-table">
       <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip>
         <template #default="{ row }">
           <a v-if="row.status === 'published'" :href="`/#/article/${row.slug}`" target="_blank" class="article-link">
@@ -170,7 +170,9 @@
 
 <script setup>
 import { ref, onMounted, inject } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { errMsg } from '@/utils/error'
+import { confirmThen } from '@/utils/confirm'
 import { Plus, Edit, Delete, Upload, Download } from '@element-plus/icons-vue'
 import {
   getAdminArticleList,
@@ -256,7 +258,7 @@ async function loadArticles() {
       total.value = res.data.pagination.total
     }
   } catch (error) {
-    ElMessage.error('加载文章列表失败: ' + (error.response?.data?.message || error.message))
+    ElMessage.error('加载文章列表失败: ' + errMsg(error))
   } finally {
     loading.value = false
   }
@@ -305,7 +307,7 @@ async function openEdit(row) {
       }
     }
   } catch (error) {
-    ElMessage.error('加载文章详情失败: ' + (error.response?.data?.message || error.message))
+    ElMessage.error('加载文章详情失败: ' + errMsg(error))
     dialogVisible.value = false
   } finally {
     fetchingContent.value = false
@@ -333,7 +335,7 @@ async function handleSave() {
     invalidateCache()
     refreshAdminData?.()
   } catch (error) {
-    ElMessage.error((isEditing.value ? '更新' : '创建') + '失败: ' + (error.response?.data?.message || error.message))
+    ElMessage.error((isEditing.value ? '更新' : '创建') + '失败: ' + errMsg(error))
   } finally {
     saving.value = false
   }
@@ -353,7 +355,7 @@ async function handleImport(uploadFile) {
       ElMessage.error(res.data.message || '导入失败')
     }
   } catch (error) {
-    ElMessage.error('导入失败: ' + (error.response?.data?.message || error.message))
+    ElMessage.error('导入失败: ' + errMsg(error))
   } finally {
     importing.value = false
     uploadRef.value?.clearFiles()
@@ -380,33 +382,27 @@ async function handleExport(row) {
       ElMessage.success('导出完成')
     }
   } catch (error) {
-    ElMessage.error('导出失败: ' + (error.response?.data?.message || error.message))
+    ElMessage.error('导出失败: ' + errMsg(error))
   } finally {
     exportingId.value = null
   }
 }
 
 function handleDelete(row) {
-  ElMessageBox.confirm(
-    `确定要删除文章「${row.title}」吗？此操作不可恢复！`,
-    '删除确认',
-    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning', ...confirmBase }
-  )
-    .then(async () => {
-      deletingId.value = row.id
-      try {
-        await deleteAdminArticle(row.id)
-        ElMessage.success('文章已删除')
-        await loadArticles()
-        invalidateCache()
-        refreshAdminData?.()
-      } catch (error) {
-        ElMessage.error('删除失败: ' + (error.response?.data?.message || error.message))
-      } finally {
-        deletingId.value = null
-      }
-    })
-    .catch(() => {})
+  confirmThen(`确定要删除文章「${row.title}」吗？此操作不可恢复！`, "删除确认", "warning", async () => {
+    deletingId.value = row.id
+    try {
+      await deleteAdminArticle(row.id)
+      ElMessage.success('文章已删除')
+      await loadArticles()
+      invalidateCache()
+      refreshAdminData?.()
+    } catch (error) {
+      ElMessage.error(errMsg(error, "删除失败: "))
+    } finally {
+      deletingId.value = null
+    }
+  })
 }
 
 onMounted(() => {

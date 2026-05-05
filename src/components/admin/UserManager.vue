@@ -16,7 +16,7 @@
       <span class="user-count">找到 {{ filteredTotal }} / 共 {{ total }} 个用户</span>
     </div>
 
-    <el-table :data="users" stripe v-loading="loading" class="user-table">
+    <el-table :data="users" v-loading="loading" class="user-table">
       <el-table-column prop="id" label="ID" width="60" align="center" />
       <el-table-column label="头像" width="60" align="center">
         <template #default="{ row }">
@@ -93,9 +93,11 @@
 
 <script setup>
 import { ref, computed, onMounted, inject } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage } from "element-plus";
 import { Plus, Edit, Delete, Key } from "@element-plus/icons-vue";
 import { getAdminUsers, updateAdminUser, deleteAdminUser, resetAdminUserPassword } from "@/api/services/adminService";
+import { errMsg } from "@/utils/error";
+import { confirmThen } from "@/utils/confirm";
 
 const users = ref([]);
 const searchQuery = ref("");

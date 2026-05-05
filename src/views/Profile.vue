@@ -237,7 +237,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
+            color: #e6edf3;
             opacity: 0;
             transition: opacity 0.25s;
 

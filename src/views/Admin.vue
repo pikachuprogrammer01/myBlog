@@ -13,7 +13,11 @@
         <el-tab-pane label="数据概览" name="overview">
           <AdminStats :stats="stats" />
           <div class="blog-card">
-            <AdminChart ref="overviewChartRef" v-if="articles.length > 0" :options="categoryOptions" />
+            <AdminChart
+              ref="overviewChartRef"
+              v-if="articles.length > 0"
+              :options="categoryOptions"
+            />
           </div>
         </el-tab-pane>
 
@@ -45,6 +49,10 @@
           <InterviewManager ref="interviewManagerRef" />
         </el-tab-pane>
 
+        <el-tab-pane label="项目管理" name="projects">
+          <ProjectManager ref="projectManagerRef" />
+        </el-tab-pane>
+
         <el-tab-pane label="用户管理" name="users">
           <UserManager ref="userManagerRef" />
         </el-tab-pane>
@@ -63,10 +71,20 @@
 <script setup>
   import { ref, computed, onMounted, watch, nextTick, provide } from "vue";
   import { useRouter } from "vue-router";
-  import { ElMessage, ElMessageBox } from "element-plus";
+  import { ElMessage } from "element-plus";
   import { Setting } from "@element-plus/icons-vue";
 
-  import { getAdminArticles, getAdminStats, getAdminComments, getAdminArticleStats, getAdminArticleList, getAdminUsers, clearAllComments as clearAllCommentsApi, resetAllData as resetAllDataApi, testEmailConfig } from "@/api/services/adminService";
+  import {
+    getAdminArticles,
+    getAdminStats,
+    getAdminComments,
+    getAdminArticleStats,
+    getAdminArticleList,
+    getAdminUsers,
+    clearAllComments as clearAllCommentsApi,
+    resetAllData as resetAllDataApi,
+    testEmailConfig,
+  } from "@/api/services/adminService";
   import { getCache, setCache, removeCache } from "@/utils/cache";
   import { STORAGE_KEYS } from "@/constants/storage-keys";
   import { useAuth } from "@/composables/useAuth";
@@ -78,11 +96,15 @@
   import ArticleStatsTable from "@/components/admin/ArticleStatsTable.vue";
   import TagManager from "@/components/admin/TagManager.vue";
   import ArticleManager from "@/components/admin/ArticleManager.vue";
-import ToolManager from "@/components/admin/ToolManager.vue";
-import InterviewManager from "@/components/admin/InterviewManager.vue";
-import UserManager from "@/components/admin/UserManager.vue";
+  import ToolManager from "@/components/admin/ToolManager.vue";
+  import InterviewManager from "@/components/admin/InterviewManager.vue";
+  import ProjectManager from "@/components/admin/ProjectManager.vue";
+  import UserManager from "@/components/admin/UserManager.vue";
   import DataActions from "@/components/admin/DataActions.vue";
   import { getAdminInterviewQuestions } from "@/api/services/interviewService";
+  import { buildExportConfigs } from "@/constants/adminExportConfigs";
+  import { errMsg } from "@/utils/error";
+  import { confirmThen } from "@/utils/confirm";
 
   const router = useRouter();
   const { currentUser, logout } = useAuth();
@@ -93,11 +115,6 @@ import UserManager from "@/components/admin/UserManager.vue";
   } = useComments();
   const { getArticles } = useArticles();
 
-  const confirmBase = {
-    appendTo: '#app',
-    lockScroll: false,
-  };
-
   const activeTab = ref("overview");
   const articles = ref([]);
   const articleStats = ref([]);
@@ -105,40 +122,27 @@ import UserManager from "@/components/admin/UserManager.vue";
   const toolManagerRef = ref(null);
   const commentManagerRef = ref(null);
   const interviewManagerRef = ref(null);
-const userManagerRef = ref(null);
+  const projectManagerRef = ref(null);
+  const userManagerRef = ref(null);
   const overviewChartRef = ref(null);
 
   const categoryOptions = computed(() => {
     if (articles.value.length === 0) return {};
-    const categoryMap = {};
+    const map = {};
     articles.value.forEach((post) => {
-      const cats =
-        post.categories ||
-        (post.category_name ? [post.category_name] : ["未分类"]);
-      cats.forEach((cat) => {
-        categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+      (post.categories || (post.category_name ? [post.category_name] : ["未分类"])).forEach((c) => {
+        map[c] = (map[c] || 0) + 1;
       });
     });
-
     return {
       tooltip: { trigger: "item", formatter: "{b}: <b>{c}</b> 篇 ({d}%)" },
       legend: { bottom: "0", icon: "circle", itemGap: 15 },
-      series: [
-        {
-          name: "分类占比",
-          type: "pie",
-          radius: ["45%", "70%"],
-          avoidLabelOverlap: true,
-          itemStyle: { borderRadius: 10, borderColor: "#fff", borderWidth: 2 },
-          emphasis: {
-            label: { show: true, fontSize: "14", fontWeight: "bold" },
-          },
-          data: Object.keys(categoryMap).map((key) => ({
-            name: key,
-            value: categoryMap[key],
-          })),
-        },
-      ],
+      series: [{
+        name: "分类占比", type: "pie", radius: ["45%", "70%"], avoidLabelOverlap: true,
+        itemStyle: { borderRadius: 4, borderColor: "#161b22", borderWidth: 2 },
+        emphasis: { label: { show: true, fontSize: "14", fontWeight: "bold" } },
+        data: Object.keys(map).map((k) => ({ name: k, value: map[k] })),
+      }],
     };
   });
 
@@ -161,264 +165,118 @@ const userManagerRef = ref(null);
       removeCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
       adminLoading.value = true;
     } else {
-      // Step 1: Show article store data immediately
       const localArticles = getArticles();
       articles.value = localArticles;
 
-      // Step 2: Show cached data from previous admin visit
       const cachedStats = getCache(STORAGE_KEYS.CACHED_ADMIN_STATS);
       const cachedArticleStats = getCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS);
 
-      if (cachedStats) {
-        stats.value = cachedStats;
-      } else {
-        stats.value = {
-          totalArticles: localArticles.length,
-          totalComments: 0,
-          totalUsers: 0,
-          totalViews: localArticles.reduce(
-            (sum, a) => sum + (a.view_count || a.views || 0),
-            0,
-          ),
-        };
-      }
-
-      if (cachedArticleStats) {
-        articleStats.value = cachedArticleStats;
-      }
+      stats.value = cachedStats || {
+        totalArticles: localArticles.length, totalComments: 0, totalUsers: 0,
+        totalViews: localArticles.reduce((sum, a) => sum + (a.view_count || a.views || 0), 0),
+      };
+      if (cachedArticleStats) articleStats.value = cachedArticleStats;
     }
 
-    // Step 3: Refresh from API
     try {
       const [articlesRes, statsRes, articleStatsRes] = await Promise.all([
-        getAdminArticles(),
-        getAdminStats(),
-        getAdminArticleStats(),
+        getAdminArticles(), getAdminStats(), getAdminArticleStats(),
       ]);
 
       if (articlesRes.data.success) {
         articles.value = articlesRes.data.data.map((a) => ({
-          ...a,
-          id: a.slug || a.id,
+          ...a, id: a.slug || a.id,
           categories: a.category_name ? [a.category_name] : a.categories || [],
         }));
       }
-
       if (statsRes.data.success) {
         stats.value = statsRes.data.data;
         setCache(STORAGE_KEYS.CACHED_ADMIN_STATS, stats.value);
       }
-
       if (articleStatsRes.data.success) {
         articleStats.value = articleStatsRes.data.data;
         setCache(STORAGE_KEYS.CACHED_ADMIN_ARTICLE_STATS, articleStats.value);
       }
     } catch (error) {
-      console.error(
-        "API 加载管理数据失败，使用缓存数据:",
-        error?.message || error,
-      );
+      console.error("API 加载管理数据失败，使用缓存数据:", error?.message || error);
     } finally {
-      if (skipCache) {
-        adminLoading.value = false;
-      }
+      if (skipCache) adminLoading.value = false;
     }
   };
 
-  provide('refreshAdminData', () => loadData(true));
+  provide("refreshAdminData", () => loadData(true));
 
   const deleteComment = (commentId) => {
-    ElMessageBox.confirm("确定要删除这条评论吗？", "删除确认", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-      ...confirmBase,
-    })
-      .then(async () => {
-        try {
-          const result = await deleteCommentApi(commentId);
-          if (result.success) {
-            ElMessage.success("评论已删除");
-            commentManagerRef.value?.loadComments();
-          } else {
-            ElMessage.error(result.message || "删除失败");
-          }
-        } catch (error) {
-          ElMessage.error(
-            "删除失败: " +
-              (error.response?.data?.message || error.message || "网络错误"),
-          );
+    confirmThen("确定要删除这条评论吗？", "删除确认", "warning", async () => {
+      try {
+        const result = await deleteCommentApi(commentId);
+        if (result.success) {
+          ElMessage.success("评论已删除");
+          commentManagerRef.value?.loadComments();
+        } else {
+          ElMessage.error(result.message || "删除失败");
         }
-      })
-      .catch(() => {
-        ElMessage.info("已取消删除");
-        return;
-      });
-  };
-
-  const batchDeleteComments = async (commentIds) => {
-    if (!commentIds || commentIds.length === 0) return;
-
-    try {
-      await ElMessageBox.confirm(
-        `确定要删除选中的 ${commentIds.length} 条评论吗？`,
-        "批量删除确认",
-        {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning",
-          ...confirmBase,
-        },
-      );
-    } catch {
-      ElMessage.info("已取消批量删除");
-      return;
-    }
-
-    try {
-      const result = await batchDeleteApi(commentIds);
-      if (result.success) {
-        ElMessage.success(
-          `已删除 ${result.deletedCount || commentIds.length} 条评论`,
-        );
-        commentManagerRef.value?.loadComments();
-      } else {
-        ElMessage.error(result.message || "批量删除失败");
+      } catch (error) {
+        ElMessage.error(errMsg(error, "删除失败: "));
       }
-    } catch (error) {
-      ElMessage.error(
-        "批量删除失败: " +
-          (error.response?.data?.message || error.message || "网络错误"),
-      );
-    }
+    });
   };
+
+  const batchDeleteComments = (commentIds) => {
+    if (!commentIds || commentIds.length === 0) return;
+    confirmThen(`确定要删除选中的 ${commentIds.length} 条评论吗？`, "批量删除确认", "warning", async () => {
+      try {
+        const result = await batchDeleteApi(commentIds);
+        if (result.success) {
+          ElMessage.success(`已删除 ${result.deletedCount || commentIds.length} 条评论`);
+          commentManagerRef.value?.loadComments();
+        } else {
+          ElMessage.error(result.message || "批量删除失败");
+        }
+      } catch (error) {
+        ElMessage.error(errMsg(error, "批量删除失败: "));
+      }
+    });
+  };
+
+  const exportConfigs = buildExportConfigs({
+    stats,
+    categoryOptions,
+    articleStats,
+    tagManagerRef,
+    toolManagerRef,
+    projectManagerRef,
+    getAdminComments,
+    getAdminArticleList,
+    getAdminInterviewQuestions,
+    getAdminUsers,
+  });
 
   const exportData = async () => {
     try {
-      const { utils, writeFile } = await import("xlsx");
-
-      const dateStr = new Date().toISOString().split("T")[0];
-      const wb = utils.book_new();
-      let fileName = `blog-data-${dateStr}.xlsx`;
-
-      if (activeTab.value === "overview") {
-        fileName = `blog-overview-${dateStr}.xlsx`;
-        // Sheet 1: 数据概览
-        utils.book_append_sheet(
-          wb,
-          utils.json_to_sheet([
-            { 指标: "文章总数", 数值: stats.value.totalArticles },
-            { 指标: "评论总数", 数值: stats.value.totalComments },
-            { 指标: "用户总数", 数值: stats.value.totalUsers },
-            { 指标: "总阅读量", 数值: stats.value.totalViews },
-          ]),
-          "数据概览",
-        );
-
-        // Sheet 2: 分类统计（来自饼图数据）
-        const catData = (categoryOptions.value.series?.[0]?.data || []).map(
-          (d) => ({ 分类: d.name, 文章数: d.value }),
-        );
-        if (catData.length > 0) {
-          utils.book_append_sheet(
-            wb,
-            utils.json_to_sheet(catData),
-            "分类统计",
-          );
-        }
-      } else if (activeTab.value === "articles") {
-        fileName = `blog-article-stats-${dateStr}.xlsx`;
-        const data = articleStats.value.map((a) => ({
-          文章标题: a.title,
-          状态: a.status === "published" ? "已发布" : "草稿",
-          浏览: a.view_count || 0,
-          点赞: a.likes || 0,
-          评论: a.comments || 0,
-          收藏: a.bookmarks || 0,
-          发布日期: a.created_at
-            ? new Date(a.created_at).toLocaleDateString("zh-CN")
-            : "-",
-        }));
-        utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章数据");
-      } else if (activeTab.value === "comments") {
-        fileName = `blog-comments-${dateStr}.xlsx`;
-        const commentsRes = await getAdminComments({ limit: 10000 });
-        const data = (commentsRes.data?.data || []).map((c) => ({
-          用户: c.username || c.user_id || "-",
-          评论内容: c.content || "-",
-          所属文章: c.article_title || "-",
-          时间: c.created_at
-            ? new Date(c.created_at).toLocaleString("zh-CN")
-            : "-",
-        }));
-        utils.book_append_sheet(wb, utils.json_to_sheet(data), "评论管理");
-      } else if (activeTab.value === "article-manage") {
-        fileName = `blog-article-list-${dateStr}.xlsx`;
-        const res = await getAdminArticleList({ limit: 1000 });
-        if (res.data.success) {
-          const data = res.data.data.map((a) => ({
-            文章标题: a.title || "-",
-            状态: a.status === "published" ? "已发布" : "草稿",
-            分类: a.category_name || "-",
-            标签: Array.isArray(a.tags)
-              ? a.tags.join(", ")
-              : typeof a.tags === "string"
-                ? a.tags
-                : "-",
-            浏览: a.view_count || 0,
-            创建日期: a.created_at
-              ? new Date(a.created_at).toLocaleDateString("zh-CN")
-              : "-",
-          }));
-          utils.book_append_sheet(wb, utils.json_to_sheet(data), "文章管理");
-        }
-      } else if (activeTab.value === "tags") {
-        fileName = `blog-tags-${dateStr}.xlsx`;
-        const tagData = (tagManagerRef.value?.tags || []).map((t) => ({
-          标签名称: t.name,
-          别名: t.slug,
-          文章数: t.articleCount || 0,
-        }));
-        utils.book_append_sheet(wb, utils.json_to_sheet(tagData), "标签管理");
-      } else if (activeTab.value === "tools") {
-        fileName = `blog-tools-${dateStr}.xlsx`;
-        const toolData = (toolManagerRef.value?.tools || []).map((t) => ({
-          工具名称: t.name,
-          分类: t.category,
-          链接: t.url,
-          描述: t.description,
-          排序: t.sort_order,
-        }));
-        utils.book_append_sheet(wb, utils.json_to_sheet(toolData), "工具管理");
-      } else if (activeTab.value === "interview") {
-        fileName = `blog-interview-${dateStr}.xlsx`;
-        const interviewRes = await getAdminInterviewQuestions({ limit: 10000 });
-        const interviewData = (interviewRes.data?.data || []).map((q) => ({
-          题目标题: q.title,
-          分类: q.category,
-          难度: q.difficulty === "easy" ? "简单" : q.difficulty === "medium" ? "中等" : "困难",
-          标签: Array.isArray(q.tags) ? q.tags.join(", ") : "",
-          简述: q.summary || "",
-          浏览: q.view_count || 0,
-          更新时间: q.updated_at
-            ? new Date(q.updated_at).toLocaleString("zh-CN")
-            : "-",
-        }));
-        utils.book_append_sheet(wb, utils.json_to_sheet(interviewData), "题库管理");
-      } else if (activeTab.value === "users") {
-        fileName = `blog-users-${dateStr}.xlsx`;
-        const usersRes = await getAdminUsers({ limit: 10000 });
-        const userData = (usersRes.data?.data || []).map((u) => ({
-          用户名: u.username,
-          角色: u.role === "admin" ? "管理员" : "普通用户",
-          注册时间: u.created_at
-            ? new Date(u.created_at).toLocaleString("zh-CN")
-            : "-",
-        }));
-        utils.book_append_sheet(wb, utils.json_to_sheet(userData), "用户管理");
+      const cfg = exportConfigs.find((c) => c.tab === activeTab.value);
+      if (!cfg) {
+        ElMessage.error("暂无导出配置");
+        return;
       }
 
-      writeFile(wb, fileName);
+      const { utils, writeFile } = await import("xlsx");
+      const dateStr = new Date().toISOString().split("T")[0];
+      const wb = utils.book_new();
+
+      for (const sheet of cfg.sheets) {
+        const rows = await sheet.getRows();
+        if (sheet.skipIfEmpty && rows.length === 0) continue;
+        const header = sheet.columns.map((c) => c.label);
+        const body = rows.map((row) => sheet.columns.map((c) => row[c.field]));
+        utils.book_append_sheet(
+          wb,
+          utils.aoa_to_sheet([header, ...body]),
+          sheet.sheetName,
+        );
+      }
+
+      writeFile(wb, `blog-${cfg.name}-${dateStr}.xlsx`);
       ElMessage.success("数据导出成功");
     } catch {
       ElMessage.error("导出失败");
@@ -426,60 +284,37 @@ const userManagerRef = ref(null);
   };
 
   const clearAllComments = () => {
-    ElMessageBox.confirm("确定要清空所有评论吗？此操作不可恢复！", "清空确认", {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "error",
-      ...confirmBase,
-    })
-      .then(async () => {
-        try {
-          const res = await clearAllCommentsApi();
-          if (res.data.success) {
-            ElMessage.success(
-              `已清空 ${res.data.data?.deletedCount || 0} 条评论`,
-            );
-            commentManagerRef.value?.loadComments();
-            await loadData();
-          } else {
-            ElMessage.error(res.data.message || "清空失败");
-          }
-        } catch (error) {
-          ElMessage.error(
-            "清空评论失败: " + (error.response?.data?.message || error.message),
-          );
+    confirmThen("确定要清空所有评论吗？此操作不可恢复！", "清空确认", "error", async () => {
+      try {
+        const res = await clearAllCommentsApi();
+        if (res.data.success) {
+          ElMessage.success(`已清空 ${res.data.data?.deletedCount || 0} 条评论`);
+          commentManagerRef.value?.loadComments();
+          await loadData();
+        } else {
+          ElMessage.error(res.data.message || "清空失败");
         }
-      })
-      .catch(() => {});
+      } catch (error) {
+        ElMessage.error(errMsg(error, "清空评论失败: "));
+      }
+    });
   };
 
   const testEmail = async () => {
     try {
       const res = await testEmailConfig();
-      if (res.data.success) {
-        ElMessage.success(res.data.message || "测试邮件已发送");
-      } else {
-        ElMessage.error(res.data.message || "邮件测试失败");
-      }
+      const msg = res.data.message;
+      if (res.data.success) ElMessage.success(msg || "测试邮件已发送");
+      else ElMessage.error(msg || "邮件测试失败");
     } catch (error) {
-      ElMessage.error(
-        "邮件测试失败: " + (error.response?.data?.message || error.message),
-      );
+      ElMessage.error(errMsg(error, "邮件测试失败: "));
     }
   };
 
   const resetAllData = () => {
-    ElMessageBox.confirm(
+    confirmThen(
       "确定要重置所有数据吗？这是破坏性操作！将清空所有评论、点赞、收藏和联系消息。用户和文章数据将保留。",
-      "重置确认",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "error",
-        ...confirmBase,
-      },
-    )
-      .then(async () => {
+      "重置确认", "error", async () => {
         try {
           const res = await resetAllDataApi();
           if (res.data.success) {
@@ -488,15 +323,12 @@ const userManagerRef = ref(null);
             ElMessage.error(res.data.message || "重置失败");
           }
         } catch (error) {
-          ElMessage.error(
-            "重置失败: " + (error.response?.data?.message || error.message),
-          );
+          ElMessage.error(errMsg(error, "重置失败: "));
         } finally {
           logout();
           router.push("/");
         }
-      })
-      .catch(() => {});
+      });
   };
 
   watch(activeTab, (newTab) => {

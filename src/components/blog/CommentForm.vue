@@ -26,7 +26,7 @@
             <div class="user-role">
               <el-tag
                 v-if="currentUser.role === 'admin'"
-                size="mini"
+                size="small"
                 type="danger"
               >
                 管理员
@@ -629,7 +629,7 @@
 
                   &.active {
                     color: var(--blog-primary-color);
-                    background-color: rgba(var(--blog-primary-rgb), 0.1);
+                    background-color: rgba(242, 201, 76, 0.1);
                   }
 
                   strong,

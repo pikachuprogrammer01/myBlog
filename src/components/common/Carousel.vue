@@ -374,7 +374,7 @@ onUnmounted(() => {
           right: 0;
           padding: var(--blog-spacing-xl);
           background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-          color: white;
+          color: #e6edf3;
 
           .slide-title {
             margin: 0 0 var(--blog-spacing-sm);
@@ -437,14 +437,15 @@ onUnmounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: rgba(255, 255, 255, 0.8);
-        border: none;
+        background-color: rgba(22, 27, 34, 0.85);
+        border: 1px solid #30363d;
         box-shadow: var(--blog-shadow);
-        transition: all 0.3s ease;
+        transition: all 0.12s ease;
 
         &:hover:not(:disabled) {
-          background-color: white;
-          transform: scale(1.1);
+          background-color: #161b22;
+          border-color: #f2c94c;
+          transform: scale(1.05);
         }
 
         &:disabled {
@@ -467,16 +468,16 @@ onUnmounted(() => {
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background-color: rgba(255, 255, 255, 0.5);
+        background-color: rgba(48, 54, 61, 0.5);
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.12s ease;
 
         &:hover {
-          background-color: rgba(255, 255, 255, 0.8);
+          background-color: rgba(139, 148, 158, 0.6);
         }
 
         &.active {
-          background-color: white;
+          background-color: #f2c94c;
           transform: scale(1.2);
         }
       }

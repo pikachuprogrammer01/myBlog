@@ -251,21 +251,25 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 12px 16px;
-  border-radius: 24px;
-  box-shadow: var(--blog-shadow);
-  transition: all 0.3s ease;
+  border-radius: 2px;
+  background: #f2c94c;
+  color: #0d0f11;
+  border: none;
+  box-shadow: 3px 3px 0px #000;
+  transition: all 0.1s ease;
   opacity: 0.9;
   user-select: none;
 
   &:hover {
     opacity: 1;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0px #000;
   }
 
   &:active {
-    transform: translateY(0);
-    transition: transform 0.1s ease;
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px #000;
+    transition: transform 0.05s ease;
   }
 
   &.back-to-top-circular {

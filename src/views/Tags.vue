@@ -22,7 +22,7 @@
           :key="tag.tag"
           class="interactive-tag"
           :class="{ 'is-active': selectedTag === tag.tag }"
-          :style="{ backgroundColor: getTagColor(tag.count), borderColor: getTagColor(tag.count), color: '#fff' }"
+          :style="{ backgroundColor: getTagColor(tag.count), borderColor: getTagColor(tag.count), color: '#E6EDF3' }"
           @click="selectTag(tag.tag)"
         >
           <el-icon><PriceTag /></el-icon>
@@ -170,12 +170,12 @@ const filteredArticles = computed(() =>
 );
 
 const tagColors = [
-  '#409eff', // 蓝色
-  '#67c23a', // 绿色
-  '#e6a23c', // 橙色
-  '#f56c6c', // 红色
-  '#9b59b6', // 紫色
-  '#1abc9c', // 青色
+  '#1a3a5c', // 暗蓝
+  '#1a4a2e', // 暗绿
+  '#5c3a1a', // 暗橙
+  '#4a1a2e', // 暗红
+  '#2e1a4a', // 暗紫
+  '#1a3a4a', // 暗青
 ];
 
 const getTagColor = (count) => {
@@ -274,17 +274,17 @@ onMounted(() => {
 
       &.is-active {
         background: var(--el-color-primary);
-        color: white;
+        color: #e6edf3;
         border-color: var(--el-color-primary);
         .count-badge {
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
+          background: rgba(0, 0, 0, 0.2);
+          color: #e6edf3;
         }
       }
 
       .count-badge {
-        background: #f0f2f5;
-        color: #909399;
+        background: #21262d;
+        color: #8b949e;
         padding: 2px 8px;
         border-radius: 10px;
         font-size: 12px;
@@ -301,7 +301,7 @@ onMounted(() => {
       justify-content: space-between;
       align-items: center;
       padding-bottom: 20px;
-      border-bottom: 1px solid #f0f2f5;
+      border-bottom: 1px solid #30363d;
       margin-bottom: 10px;
 
       .current-tag {

@@ -68,6 +68,7 @@ declare module 'vue' {
     InterviewManager: typeof import('./components/admin/InterviewManager.vue')['default']
     Main: typeof import('./components/layout/Main.vue')['default']
     MarkdownRenderer: typeof import('./components/blog/MarkdownRenderer.vue')['default']
+    ProjectManager: typeof import('./components/admin/ProjectManager.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SectionHeader: typeof import('./components/home/SectionHeader.vue')['default']
