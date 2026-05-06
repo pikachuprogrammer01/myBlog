@@ -36,6 +36,7 @@
             <el-dropdown-menu>
               <el-dropdown-item command="tools">> 实用工具</el-dropdown-item>
               <el-dropdown-item command="interview">> 面试题库</el-dropdown-item>
+              <el-dropdown-item command="rag">> AI 问答</el-dropdown-item>
               <el-dropdown-item command="about">> 关于我</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -148,6 +149,7 @@ const handleMoreCommand = (command) => {
   switch (command) {
     case "tools": router.push("/tools"); break;
     case "interview": router.push("/interview"); break;
+    case "rag": router.push("/rag"); break;
     case "about": router.push("/about"); break;
   }
 };

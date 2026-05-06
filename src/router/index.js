@@ -71,6 +71,11 @@ const routes = [
     component: () => import('@/views/Search.vue')
   },
   {
+    path: '/rag',
+    name: 'RagQA',
+    component: () => import('@/views/RagQA.vue')
+  },
+  {
     path: '/archive',
     name: 'Archive',
     component: () => import('@/views/Archive.vue')
