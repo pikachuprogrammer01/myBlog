@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人博客</title>
+  <script>
+    // GitHub Pages SPA 回退：将无法匹配的路径存到 sessionStorage，
+    // 跳回 SPA 入口，由 Vue Router 恢复正确路由
+    (function() {
+      var base = '/myBlog';
+      var path = location.pathname;
+      // 去掉 base 前缀得到应用内路径
+      if (path.indexOf(base) === 0) {
+        path = path.slice(base.length) || '/';
+      }
+      // 保留 query 和 hash
+      var fullPath = path + location.search + location.hash;
+      sessionStorage.setItem('spa-redirect', fullPath);
+      location.replace(base + '/');
+    })();
+  </script>
+</head>
+<body></body>
+</html>

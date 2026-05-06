@@ -1,0 +1,28 @@
+# Claude专用忽略文件
+node_modules/
+dist/
+build/
+*.log
+*.tmp
+*.cache
+scripts/
+public/
+package-lock.json
+SPEC.md
+content/
+src/
+
+# 测试文件
+__tests__/
+test/
+coverage/
+
+# 大文件
+*.zip
+*.tar.gz
+*.png
+*.jpg
+
+# 配置文件（选择性）
+.env*
+*.local

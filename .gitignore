@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+/api/.env
+api/data/article-embeddings.json
+.vercel
+*.sql
+.claude/
