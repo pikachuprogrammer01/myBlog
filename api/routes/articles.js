@@ -44,7 +44,10 @@ router.get('/:slug', async (req, res) => {
   await pool.execute('UPDATE articles SET view_count = view_count + 1 WHERE slug = ?', [slug]);
 
   const [rows] = await pool.execute(
-    `SELECT a.*, c.name as category_name, c.slug as category_slug
+    `SELECT a.id, a.title, a.slug, a.content, a.summary, a.cover_image,
+            a.category_id, a.tags, a.status, a.view_count, a.author_id,
+            a.created_at, a.updated_at,
+            c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.slug = ? AND a.status = 'published'`,
