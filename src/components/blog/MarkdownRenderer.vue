@@ -136,6 +136,19 @@
   const activeHeadingId = ref("");
   const readingProgress = ref(0);
 
+  // 生成标题ID（必须在 md computed 之前定义，watcher immediate 会立即触发渲染）
+  const generateHeadingId = (text, level) => {
+    return (
+      text
+        .toLowerCase()
+        .replace(/[^\w一-龥\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 50) || `heading-${level}-${Date.now()}`
+    );
+  };
+
   // 创建MarkdownIt实例
   const md = computed(() => {
     const options = {
@@ -220,20 +233,6 @@
     },
     { immediate: true },
   );
-
-  // 生成标题ID
-  const generateHeadingId = (text, level) => {
-    return (
-      text
-        .toLowerCase()
-        .replace(/[^\w\u4e00-\u9fa5\s-]/g, "") // 移除非字母数字中文和空格连字符
-        .replace(/\s+/g, "-") // 空格替换为连字符
-        .replace(/-+/g, "-") // 合并多个连字符
-        .replace(/^-|-$/g, "") // 移除首尾连字符
-        .slice(0, 50) || // 限制长度
-      `heading-${level}-${Date.now()}`
-    );
-  };
 
   // 切换目录折叠状态
   const toggleToc = () => {
