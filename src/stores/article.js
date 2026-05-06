@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { getArticles, getCategories, toggleLike, getLikeStatus, toggleBookmark, getBookmarkStatus, getBookmarks } from '@/api/services/articleService';
+import { getArticles, getCategories, toggleLike, getLikeStatus, toggleBookmark, getBookmarkStatus, getBookmarks, searchSemantic } from '@/api/services/articleService';
 import articlesData from '@/data/articles.json';
 import { getCache, setCache, removeCache } from '@/utils/cache';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
@@ -185,6 +185,12 @@ export const useArticleStore = defineStore('article', () => {
     });
   }
 
+  async function searchArticlesSemantic(query) {
+    const res = await searchSemantic(query);
+    if (res.data.success) return res.data.data;
+    throw new Error(res.data.message || '语义搜索失败');
+  }
+
   function getPreviousNextArticles(currentId) {
     const sorted = getAllArticles();
     const idx = sorted.findIndex((a) => a.id === currentId || a.slug === currentId);
@@ -277,5 +283,6 @@ export const useArticleStore = defineStore('article', () => {
     toggleBookmark,
     getBookmarkStatus,
     getBookmarks,
+    searchArticlesSemantic,
   };
 });

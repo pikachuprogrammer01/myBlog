@@ -20,9 +20,22 @@
             </el-button>
           </template>
         </el-input>
-        <div class="search-hint">
-          <p>支持搜索文章标题、内容、标签等</p>
+        <div class="search-mode-toggle">
+          <el-radio-group v-model="searchMode" size="small" @change="onModeChange">
+            <el-radio-button value="keyword">关键词搜索</el-radio-button>
+            <el-radio-button value="semantic">语义搜索</el-radio-button>
+          </el-radio-group>
         </div>
+        <div class="search-hint">
+          <p v-if="searchMode === 'keyword'">支持搜索文章标题、内容、标签等</p>
+          <p v-else>基于语义理解，搜索含义相近的文章</p>
+        </div>
+      </div>
+
+      <!-- 语义搜索加载中 -->
+      <div v-if="searching && semanticSearching" class="semantic-loading">
+        <el-icon class="is-loading"><Loading /></el-icon>
+        <span>正在语义理解...</span>
       </div>
 
       <!-- 搜索结果 -->
@@ -47,6 +60,9 @@
             <router-link :to="`/article/${article.id}`" class="article-title">
               <el-icon><Document /></el-icon>
               {{ article.title }}
+              <span v-if="searchMode === 'semantic' && article.score !== undefined" class="score-badge">
+                {{ (article.score * 100).toFixed(0) }}%
+              </span>
             </router-link>
             <div class="article-meta">
               <span class="article-date">
@@ -118,17 +134,22 @@ import {
   PriceTag,
   Close,
   List,
+  Loading,
 } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 import { formatDate } from "@/utils/date";
 
 const route = useRoute();
 const router = useRouter();
-const { searchArticles, getPopularTags } = useArticles();
+const { searchArticles, searchArticlesSemantic, getPopularTags } = useArticles();
 
 const searchKeyword = ref("");
 const searching = ref(false);
 const searchResults = ref([]);
 let searchTimer = null;
+const searchMode = ref("keyword");
+const semanticSearching = ref(false);
+const semanticAvailable = ref(true);
 
 const normalizeKeyword = (value) => {
   if (Array.isArray(value)) {
@@ -193,14 +214,40 @@ async function performSearch(keyword) {
 
   searching.value = true;
   try {
-    const results = searchArticles(normalizedKeyword);
-    searchResults.value = results || [];
+    if (searchMode.value === "keyword") {
+      const results = searchArticles(normalizedKeyword);
+      searchResults.value = results || [];
+    } else {
+      semanticSearching.value = true;
+      try {
+        const results = await searchArticlesSemantic(normalizedKeyword);
+        searchResults.value = results || [];
+        semanticAvailable.value = true;
+      } catch (error) {
+        console.error("语义搜索失败:", error);
+        if (error.response?.status === 503) {
+          semanticAvailable.value = false;
+          ElMessage.warning("语义搜索未配置，请联系站长设置 EMBEDDING_API_KEY");
+        } else {
+          ElMessage.error("语义搜索失败，请稍后重试");
+        }
+        searchResults.value = [];
+      } finally {
+        semanticSearching.value = false;
+      }
+    }
   } catch (error) {
     console.error("搜索失败:", error);
     searchResults.value = [];
   } finally {
     searching.value = false;
   }
+}
+
+// 切换搜索模式
+function onModeChange() {
+  const kw = normalizeKeyword(searchKeyword.value);
+  if (kw) performSearch(kw);
 }
 
 // 通过标签搜索
@@ -264,11 +311,26 @@ onUnmounted(() => {
   .search-box {
     margin-bottom: var(--blog-spacing-xl);
 
+    .search-mode-toggle {
+      margin-top: var(--blog-spacing-md);
+      margin-bottom: var(--blog-spacing-sm);
+    }
+
     .search-hint {
       margin-top: var(--blog-spacing-sm);
       color: var(--blog-text-secondary);
       font-size: 14px;
     }
+  }
+
+  .semantic-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--blog-spacing-sm);
+    padding: var(--blog-spacing-xl) 0;
+    color: var(--blog-text-secondary);
+    font-size: 15px;
   }
 
   .search-results {
@@ -330,6 +392,13 @@ onUnmounted(() => {
         &:hover {
           color: var(--blog-primary-color);
           text-decoration: underline;
+        }
+
+        .score-badge {
+          font-size: 12px;
+          color: var(--blog-primary-color);
+          margin-left: var(--blog-spacing-xs);
+          font-weight: 600;
         }
 
         .el-icon {

@@ -39,3 +39,7 @@ export function getStats() {
 export function getTags() {
   return client.get('/api/tags');
 }
+
+export function searchSemantic(query) {
+  return client.post('/api/search', { query });
+}

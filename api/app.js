@@ -50,6 +50,7 @@ const tagsRouter = require('./routes/tags');
 const toolsRouter = require('./routes/tools');
 const interviewRouter = require('./routes/interview');
 const projectsRouter = require('./routes/projects');
+const searchRouter = require('./routes/search');
 
 app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
@@ -62,6 +63,7 @@ app.use('/api/tags', tagsRouter);
 app.use('/api/tools', toolsRouter);
 app.use('/api/interview', interviewRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/search', searchRouter);
 
 // 5. Mount admin routes
 const adminArticlesRouter = require('./routes/admin/articles');

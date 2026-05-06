@@ -61,6 +61,10 @@ export function useArticles() {
     return articleStore.getArticlesByTag(tag);
   }
 
+  function searchArticlesSemantic(query) {
+    return articleStore.searchArticlesSemantic(query);
+  }
+
   function getArticlesByCategory(categoryId) {
     return articleStore.getArticlesByCategory(categoryId);
   }
@@ -89,6 +93,7 @@ export function useArticles() {
     getBookmarks,
     invalidateCache,
     getArticlesByTag,
+    searchArticlesSemantic,
     getArticlesByCategory,
     getTotalViews,
   };

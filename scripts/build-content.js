@@ -116,13 +116,61 @@ async function buildContent () {
     .filter(Boolean)
     .sort((a, b) => new Date(b.date) - new Date(a.date))
 
-  // 4. 写入数据
+  // 4. 生成文章向量嵌入（可选，需要 EMBEDDING_API_KEY）
+  await embedArticles(articles)
+
+  // 5. 写入数据
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(articles, null, 2))
 
-  // 5. 生成 Sitemap
+  // 6. 生成 Sitemap
   generateSitemap(articles)
 
   console.log(`\n✅ Build completed! Processed ${articles.length} articles.`)
+}
+
+// --- 文章向量嵌入生成（可选） ---
+const EMBEDDING_API_KEY = process.env.EMBEDDING_API_KEY
+const EMBEDDING_API_URL = process.env.EMBEDDING_API_URL || 'https://api.openai.com/v1/embeddings'
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-3-small'
+
+async function embedArticles(articles) {
+  if (!EMBEDDING_API_KEY) {
+    console.log('  ⏭️  Skipping embeddings (EMBEDDING_API_KEY not set)')
+    return
+  }
+  console.log(`  🧠 Generating embeddings for ${articles.length} articles...`)
+  const embeddings = []
+  for (const article of articles) {
+    const inputText = `${article.title}\n${article.excerpt}\n${article.content}`
+      .substring(0, 10000)
+    try {
+      const res = await fetch(EMBEDDING_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${EMBEDDING_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input: inputText, model: EMBEDDING_MODEL }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      embeddings.push({ id: article.id, embedding: json.data[0].embedding })
+      console.log(`    ✓ ${article.id}`)
+    } catch (err) {
+      console.error(`    ✗ ${article.id}:`, err.message)
+    }
+  }
+
+  if (embeddings.length === 0) {
+    console.log('  ⚠️  No embeddings generated')
+    return
+  }
+
+  const embOutputDir = path.join(ROOT, 'api', 'data')
+  if (!fs.existsSync(embOutputDir)) fs.mkdirSync(embOutputDir, { recursive: true })
+  const embOutputFile = path.join(embOutputDir, 'article-embeddings.json')
+  fs.writeFileSync(embOutputFile, JSON.stringify(embeddings))
+  console.log(`  ✅ Embeddings written to api/data/article-embeddings.json (${embeddings.length} articles)`)
 }
 
 // 生成简单的sitemap（可选）
