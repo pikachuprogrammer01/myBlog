@@ -16,6 +16,7 @@ const ASSETS_DIR = path.join(ROOT, 'content', 'assets')
 const OUTPUT_FILE = path.join(ROOT, 'src', 'data', 'articles.json')
 const PUBLIC_ASSETS_DIR = path.join(ROOT, 'public', 'images')
 const SITE_URL = 'https://pikachuprogrammer01.github.io/myBlog'
+const BASE_PATH = (process.env.VITE_BASE || '/').replace(/\/?$/, '/')
 
 // --- 工具函数 ---
 
@@ -36,11 +37,10 @@ function copyDirSync (src, dest) {
 }
 
 function processImagesInMarkdown (content) {
-  // 修正替换逻辑：将 ../assets/ 替换为 /images/ (因为你目标目录是 public/images)
   return content.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-    if (src.includes('../assets/')) {
+    if (src.includes('../assets/') || src.startsWith('assets/')) {
       const fileName = path.basename(src)
-      return `![${alt}](/images/${fileName})`
+      return `![${alt}](${BASE_PATH}images/${fileName})`
     }
     return match
   })
@@ -53,9 +53,9 @@ function processMarkdownFile (filePath) {
 
     const processedContent = processImagesInMarkdown(markdownContent.trim())
 
-    let cover = frontmatter.cover || '/images/article-default.jpg'
-    if (cover.includes('../assets/')) {
-      cover = `/images/${path.basename(cover)}`
+    let cover = frontmatter.cover || `${BASE_PATH}images/article-default.jpg`
+    if (cover.includes('../assets/') || cover.startsWith('assets/')) {
+      cover = `${BASE_PATH}images/${path.basename(cover)}`
     }
 
     const id = frontmatter.id || path.basename(filePath, '.md')
