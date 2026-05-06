@@ -105,7 +105,7 @@ async function mirrorImage(imageUrl, folder = 'images') {
       const segments = urlPath.split('/');
       const last = segments[segments.length - 1];
       if (last && last.includes('.')) filename = last;
-    } catch {}
+    } catch { /* ignore URL parse error, fallback to default filename */ }
 
     return await uploadImage(folder, buffer, contentType, filename);
   } catch {

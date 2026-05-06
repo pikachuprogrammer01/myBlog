@@ -65,7 +65,7 @@ function processArticle(filePath) {
       title: data.title || path.basename(filePath, '.md'),
       slug: data.id || path.basename(filePath, '.md'),
       content: content.trim(),
-      summary: data.excerpt || data.description || content.trim().replace(/[#*`!\[\]()\n]/g, '').substring(0, 150),
+      summary: data.excerpt || data.description || content.trim().replace(/[#*`!()\n]/g, '').replace(/[[\]]/g, '').substring(0, 150),
       cover_image: cover,
       tags: tags,
       categories: cats.length > 0 ? cats : ['未分类'],

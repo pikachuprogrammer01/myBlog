@@ -75,7 +75,7 @@ function processMarkdownFile (filePath) {
       date: dateStr,
       tags: Array.isArray(frontmatter.tags) ? frontmatter.tags : (frontmatter.tags ? [frontmatter.tags] : []),
       categories: Array.isArray(frontmatter.categories) ? frontmatter.categories : (frontmatter.categories ? [frontmatter.categories] : []),
-      excerpt: frontmatter.excerpt || processedContent.replace(/[#*`!\[\]\(\)]/g, '').substring(0, 100).trim() + '...',
+      excerpt: frontmatter.excerpt || processedContent.replace(/[#*`!()]/g, '').replace(/[[\]]/g, '').substring(0, 100).trim() + '...',
       cover,
       published: frontmatter.published !== false,
       content: processedContent

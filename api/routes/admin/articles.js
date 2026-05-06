@@ -11,10 +11,10 @@ async function ensureArticleColumns() {
   if (columnsReady) return;
   try {
     await pool.execute("ALTER TABLE articles MODIFY COLUMN cover_image VARCHAR(2048)");
-  } catch {}
+  } catch { /* ignore ALTER errors on existing columns */ }
   try {
     await pool.execute("ALTER TABLE articles MODIFY COLUMN content MEDIUMTEXT");
-  } catch {}
+  } catch { /* ignore ALTER errors on existing columns */ }
   columnsReady = true;
 }
 
@@ -69,7 +69,7 @@ const { isConfigured: isOssConfigured, mirrorImage, uploadImage } = require('../
 const MAX_IMAGE_BYTES = 200 * 1024;
 
 async function mirrorImagesToOss(mdContent) {
-  const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g;
+  const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
   const matches = [...mdContent.matchAll(imgRegex)];
   if (matches.length === 0) return mdContent;
 
@@ -103,7 +103,7 @@ async function mirrorImagesToOss(mdContent) {
 }
 
 async function convertImagesToBase64(mdContent) {
-  const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g;
+  const imgRegex = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g;
   const matches = [...mdContent.matchAll(imgRegex)];
   if (matches.length === 0) return mdContent;
 

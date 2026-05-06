@@ -199,22 +199,27 @@
     return mdInstance;
   });
 
-  // 渲染后的内容
-  const renderedContent = computed(() => {
-    if (!props.content) return "";
-
-    const env = {};
-    const html = md.value.render(props.content, env);
-
-    // 提取目录项
-    tocItems.value = env.headings || [];
-
-    emit("content-rendered", { html, tocItems: tocItems.value });
-    return html;
-  });
-
   // 目录项
   const tocItems = ref([]);
+
+  // 渲染后的内容
+  const renderedContent = ref("");
+
+  watch(
+    () => [props.content, md.value],
+    ([content]) => {
+      if (!content) {
+        renderedContent.value = "";
+        tocItems.value = [];
+        return;
+      }
+      const env = {};
+      renderedContent.value = md.value.render(content, env);
+      tocItems.value = env.headings || [];
+      emit("content-rendered", { html: renderedContent.value, tocItems: tocItems.value });
+    },
+    { immediate: true },
+  );
 
   // 生成标题ID
   const generateHeadingId = (text, level) => {

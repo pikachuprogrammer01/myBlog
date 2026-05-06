@@ -39,7 +39,7 @@ async function syncTagsFromArticles() {
       if (!slug) continue;
       try {
         await pool.execute('INSERT IGNORE INTO tags (name, slug) VALUES (?, ?)', [name, slug]);
-      } catch {}
+      } catch { /* tag may already exist */ }
     }
   } catch (error) {
     console.error('[Tags] 同步文章标签到字典表失败:', error.message);
