@@ -17,14 +17,14 @@
         <router-link to="/archive" class="nav-link">
           <span class="nav-bracket">[</span> 归档 <span class="nav-bracket">]</span>
         </router-link>
-        <router-link to="/categories" class="nav-link">
-          <span class="nav-bracket">[</span> 分类 <span class="nav-bracket">]</span>
-        </router-link>
         <router-link to="/projects" class="nav-link">
           <span class="nav-bracket">[</span> 项目 <span class="nav-bracket">]</span>
         </router-link>
-        <router-link to="/tags" class="nav-link">
-          <span class="nav-bracket">[</span> 标签 <span class="nav-bracket">]</span>
+        <router-link to="/interview" class="nav-link">
+          <span class="nav-bracket">[</span> 面试题库 <span class="nav-bracket">]</span>
+        </router-link>
+        <router-link to="/rag" class="nav-link">
+          <span class="nav-bracket">[</span> AI 问答 <span class="nav-bracket">]</span>
         </router-link>
 
         <el-dropdown trigger="hover" @command="handleMoreCommand">
@@ -35,8 +35,8 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="tools">> 实用工具</el-dropdown-item>
-              <el-dropdown-item command="interview">> 面试题库</el-dropdown-item>
-              <el-dropdown-item command="rag">> AI 问答</el-dropdown-item>
+              <el-dropdown-item command="categories">> 分类</el-dropdown-item>
+              <el-dropdown-item command="tags">> 标签</el-dropdown-item>
               <el-dropdown-item command="about">> 关于我</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -148,8 +148,8 @@ const handleUserCommand = (command) => {
 const handleMoreCommand = (command) => {
   switch (command) {
     case "tools": router.push("/tools"); break;
-    case "interview": router.push("/interview"); break;
-    case "rag": router.push("/rag"); break;
+    case "categories": router.push("/categories"); break;
+    case "tags": router.push("/tags"); break;
     case "about": router.push("/about"); break;
   }
 };
