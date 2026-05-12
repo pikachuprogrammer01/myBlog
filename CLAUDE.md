@@ -170,7 +170,7 @@ src/
 │   └── common/          # Carousel, BackToTop
 ├── composables/         # useAuth, useComments, useArticles
 ├── stores/              # Pinia: auth, comment, article (API-backed)
-├── views/               # 14 page components (lazy-loaded)
+├── views/               # 20 page components (lazy-loaded)
 ├── constants/           # Storage keys, hardcoded users (deprecated)
 ├── utils/               # Date formatting, storage helpers
 ├── data/                # Generated article JSON (build output)
@@ -206,13 +206,14 @@ scripts/
 - **Auth**: Login/register → API → JWT token → localStorage → axios interceptor attaches to every request
 - **Likes/Bookmarks**: Toggle button → axios POST → API → MySQL → optimistic UI update
 
-### Routing (14 Pages)
+### Routing (16 Pages)
 | Path | Component | Auth Required |
 |------|-----------|---------------|
 | `/` | Home | No |
 | `/about` | About | No |
 | `/article/:id` | Article | No |
 | `/tools` | Tools | No |
+| `/projects` | Projects | No |
 | `/contact` | Contact | No |
 | `/login` | Login | No |
 | `/register` | Register | No |
@@ -220,6 +221,7 @@ scripts/
 | `/tags` | Tags | No |
 | `/categories` | Categories | No |
 | `/search` | Search | No |
+| `/rag` | RagQA | No |
 | `/archive` | Archive | No |
 | `/admin` | Admin | Admin only |
 | `/*` | NotFound | No |

@@ -62,7 +62,7 @@ src/
 
 ## 路由设计
 
-共 **18 个路由** + 1 个通配 404，采用 Hash 模式（兼容 GitHub Pages）：
+共 **20 个路由** + 1 个通配 404，采用 Hash 模式（兼容 GitHub Pages）：
 
 | 路径 | 页面 | 权限 |
 |------|------|------|
@@ -71,6 +71,7 @@ src/
 | `/article/:id` | Article | 公开 |
 | `/tools` | Tools | 公开 |
 | `/projects` | Projects | 公开 |
+| `/rag` | RagQA | 公开 |
 | `/contact` | Contact | 公开 |
 | `/login` | Login | 公开 |
 | `/register` | Register | 公开 |
@@ -132,6 +133,7 @@ router.beforeEach(async (to, from) => {
 | `contactService` | `api/services/contactService.js` | 联系表单提交 |
 | `interviewService` | `api/services/interviewService.js` | 面试题库 API |
 | `projectService` | `api/services/projectService.js` | 项目展示 API |
+| `ragService` | `api/services/ragService.js` | RAG AI 问答 API（语义搜索 + LLM 回答） |
 
 ### 数据加载策略
 
@@ -149,7 +151,7 @@ router.beforeEach(async (to, from) => {
 - CSS 类名使用 `.blog-` 前缀 + BEM 命名
 - 不写无意义的注释，代码即文档
 
-## 页面列表（19 个）
+## 页面列表（20 个）
 
 | 页面 | 文件路径 |
 |------|----------|
@@ -158,6 +160,7 @@ router.beforeEach(async (to, from) => {
 | Article | `views/Article.vue` |
 | Tools | `views/Tools.vue` |
 | Projects | `views/Projects.vue` |
+| RagQA | `views/RagQA.vue` |
 | Contact | `views/Contact.vue` |
 | Login | `views/Login.vue` |
 | Register | `views/Register.vue` |

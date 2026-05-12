@@ -73,7 +73,7 @@ src/
 ├── api/          # HTTP 服务层（axios 封装 + 各模块 service）
 ├── stores/       # Pinia 状态管理层（auth, article, comment）
 ├── composables/  # 组合式函数（useAuth, useArticles 等）
-├── views/        # 页面组件（18 个路由页面）
+├── views/        # 页面组件（20 个路由页面）
 ├── components/   # 通用组件（layout, blog, admin, common, home）
 ├── router/       # 路由配置 + 导航守卫
 ├── utils/        # 工具函数（日期、缓存、存储、图片处理）
@@ -390,6 +390,29 @@ categories (分类)
 | PUT | `/api/admin/interview/:id` | 编辑题目 |
 | DELETE | `/api/admin/interview/:id` | 删除题目 |
 
+#### 项目管理
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/admin/projects` | 项目列表 |
+| POST | `/api/admin/projects` | 新建项目 |
+| PUT | `/api/admin/projects/:id` | 编辑项目 |
+| DELETE | `/api/admin/projects/:id` | 删除项目 |
+
+#### 健康检查
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/projects` | 项目列表 |
+| POST | `/api/projects` | 新建项目（需管理员） |
+| PUT | `/api/projects/:id` | 编辑项目（需管理员） |
+| DELETE | `/api/projects/:id` | 删除项目（需管理员） |
+
+#### RAG AI 问答
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/rag/ask` | AI 问答（基于博客文章语义检索 + LLM） |
+| GET | `/api/rag/suggestions` | 推荐问题列表 |
+| POST | `/api/articles/semantic-search` | 语义搜索文章（Embedding 向量检索） |
+
 #### 健康检查
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -405,6 +428,8 @@ categories (分类)
 | `/about` | About | 无 | 关于 |
 | `/article/:id` | Article | 无 | 文章详情（id 为 slug） |
 | `/tools` | Tools | 无 | 工具推荐 |
+| `/projects` | Projects | 无 | 项目展示 |
+| `/rag` | RagQA | 无 | AI 知识问答 |
 | `/contact` | Contact | 需登录 | 联系表单 |
 | `/login` | Login | 访客 | 登录 |
 | `/register` | Register | 访客 | 注册 |
@@ -484,6 +509,7 @@ Admin.vue
 ├── TagManager.vue（标签管理）
 ├── ToolManager.vue（工具管理）
 ├── InterviewManager.vue（面试题管理）
+├── ProjectManager.vue（项目管理）
 ├── UserManager.vue（用户管理）
 └── DataActions.vue（数据操作按钮）
 ```
