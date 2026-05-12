@@ -49,7 +49,11 @@
       </el-table-column>
       <el-table-column label="操作" width="220" align="center">
         <template #default="{ row }">
-          <el-button size="small" @click="openDialog(row)">
+          <el-button
+            size="small"
+            :disabled="row.username === 'admin'"
+            @click="openDialog(row)"
+          >
             <el-icon><Edit /></el-icon>
           </el-button>
           <el-button
@@ -64,6 +68,7 @@
             size="small"
             type="danger"
             :loading="deletingId === row.id"
+            :disabled="row.role === 'admin'"
             @click="handleDelete(row)"
           >
             <el-icon><Delete /></el-icon>
