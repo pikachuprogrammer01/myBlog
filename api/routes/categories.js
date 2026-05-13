@@ -7,8 +7,9 @@ router.get('/', async (req, res) => {
   const [rows] = await pool.execute(
     `SELECT c.*, COUNT(a.id) as article_count
      FROM categories c
-     LEFT JOIN articles a ON c.id = a.category_id AND a.status = 'published'
-     GROUP BY c.id`
+     LEFT JOIN articles a ON c.id = a.category_id AND a.status = ?
+     GROUP BY c.id`,
+    ['published']
   );
   return res.status(200).json({ success: true, data: rows });
 });
@@ -22,9 +23,9 @@ router.get('/:slug/articles', async (req, res) => {
             c.name as category_name
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE c.slug = ? AND a.status = 'published'
+     WHERE c.slug = ? AND a.status = ?
      ORDER BY a.created_at DESC`,
-    [slug]
+    [slug, 'published']
   );
 
   return res.status(200).json({ success: true, data: rows });

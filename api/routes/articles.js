@@ -15,9 +15,10 @@ router.get('/', async (req, res) => {
             c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.status = 'published'
+     WHERE a.status = ?
      ORDER BY a.created_at DESC
-     LIMIT ${limit} OFFSET ${offset}`
+     LIMIT ? OFFSET ?`,
+    ['published', limit, offset]
   );
 
   const [countResult] = await pool.execute(
@@ -50,8 +51,8 @@ router.get('/:slug', async (req, res) => {
             c.name as category_name, c.slug as category_slug
      FROM articles a
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE a.slug = ? AND a.status = 'published'`,
-    [slug]
+     WHERE a.slug = ? AND a.status = ?`,
+    [slug, 'published']
   );
 
   if (rows.length === 0) {
