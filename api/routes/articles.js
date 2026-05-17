@@ -6,8 +6,8 @@ const pool = require('../db');
 router.get('/', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const rawLimit = parseInt(req.query.limit) || 10;
-  const limit = Math.min(100, Math.max(1, rawLimit));
-  const offset = Math.max(0, (page - 1) * limit);
+  const limit = parseInt(Math.min(100, Math.max(1, rawLimit)));
+  const offset = parseInt(Math.max(0, (page - 1) * limit));
 
   const [rows] = await pool.execute(
     `SELECT a.id, a.title, a.slug, a.summary, a.cover_image,
