@@ -17,8 +17,8 @@ router.get('/', async (req, res) => {
      LEFT JOIN categories c ON a.category_id = c.id
      WHERE a.status = ?
      ORDER BY a.created_at DESC
-     LIMIT ? OFFSET ?`,
-    ['published', limit, offset]
+     LIMIT ${limit} OFFSET ${offset}`,
+    ['published']
   );
 
   const [countResult] = await pool.execute(
