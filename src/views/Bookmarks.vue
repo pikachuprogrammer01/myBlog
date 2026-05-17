@@ -19,7 +19,7 @@
         class="blog-card bookmark-item"
       >
         <div class="bookmark-cover" v-if="item.cover_image" @click="$router.push(`/article/${item.slug || item.id}`)">
-          <img :src="item.cover_image" :alt="item.title" />
+          <img :src="getCover(item)" :alt="item.title" />
         </div>
         <div class="bookmark-info" @click="$router.push(`/article/${item.slug || item.id}`)">
           <h3 class="bookmark-title">{{ item.title }}</h3>
@@ -56,12 +56,15 @@
 import { ref, onMounted } from 'vue'
 import { CollectionTag, Calendar, Delete } from '@element-plus/icons-vue'
 import { useArticles } from '@/composables/useArticles'
+import { resolveArticleCover } from '@/utils/article-cover'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 
 const { getBookmarks, toggleBookmark } = useArticles()
 const bookmarks = ref([])
 const loading = ref(true)
+
+const getCover = (item) => resolveArticleCover(item.cover_image, item.slug || item.id)
 
 const formatDate = (date) => {
   if (!date) return ''

@@ -41,7 +41,7 @@
         @click="handleArticleClick(article)"
       >
         <div v-if="article.cover" class="card-cover">
-          <img :src="article.cover" :alt="article.title" />
+          <img :src="getCover(article)" :alt="article.title" />
         </div>
         <div class="card-content">
           <h3 class="card-title">{{ article.title }}</h3>
@@ -96,6 +96,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import ArticleCard from './ArticleCard.vue'
+import { resolveArticleCover } from '@/utils/article-cover'
 
 const props = defineProps({
   // 文章数据
@@ -178,6 +179,8 @@ const emit = defineEmits([
 ])
 
 const router = useRouter()
+
+const getCover = (article) => resolveArticleCover(article.cover, article.id || article.title)
 
 // 当前页码
 const currentPage = ref(1)

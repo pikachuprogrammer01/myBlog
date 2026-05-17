@@ -67,8 +67,8 @@
       </div>
 
       <!-- 文章封面 -->
-      <div v-if="article.cover" class="article-cover">
-        <img :src="article.cover" :alt="article.title" />
+      <div v-if="resolvedCover" class="article-cover">
+        <img :src="resolvedCover" :alt="article.title" />
       </div>
     </div>
 
@@ -239,6 +239,7 @@ import { useNavigationLoading } from '@/composables/useNavigationLoading'
 import MarkdownRenderer from '@/components/blog/MarkdownRenderer.vue'
 import CommentList from '@/components/blog/CommentList.vue'
 import CommentForm from '@/components/blog/CommentForm.vue'
+import { resolveArticleCover } from '@/utils/article-cover'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -264,6 +265,11 @@ const bookmarking = ref(false)
 const commentCount = ref(0)
 const commentSort = ref('latest')
 const commentListRef = ref(null)
+
+const resolvedCover = computed(() => {
+  if (!article.value) return ''
+  return resolveArticleCover(article.value.cover, article.value.id || article.value.title)
+})
 
 const isAdmin = computed(() => currentUser.value?.role === 'admin')
 
