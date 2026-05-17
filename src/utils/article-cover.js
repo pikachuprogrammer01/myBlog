@@ -18,17 +18,17 @@ const LEGACY_EMPTY_COVERS = new Set([
 
 const ABSOLUTE_URL_PATTERN = /^(https?:)?\/\//i;
 
-function getBaseUrl() {
-  const baseUrl = import.meta.env.BASE_URL || "/";
+function getBaseUrl () {
+  const baseUrl = import.meta.env.VITE_IMAGE_BASE || import.meta.env.BASE_URL || "/";
   return baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
 }
 
-function toPublicUrl(path) {
+function toPublicUrl (path) {
   const normalizedPath = String(path || "").replace(/^\/+/, "");
   return `${getBaseUrl()}${normalizedPath}`;
 }
 
-function hashSeed(seed) {
+function hashSeed (seed) {
   const text = String(seed || "");
   let hash = 0;
   for (let index = 0; index < text.length; index += 1) {
@@ -37,12 +37,12 @@ function hashSeed(seed) {
   return hash;
 }
 
-function pickFallbackCover(seed) {
+function pickFallbackCover (seed) {
   const fallbackIndex = hashSeed(seed) % LOCAL_FALLBACK_COVERS.length;
   return toPublicUrl(LOCAL_FALLBACK_COVERS[fallbackIndex]);
 }
 
-export function resolveArticleCover(cover, seed = "") {
+export function resolveArticleCover (cover, seed = "") {
   const normalizedCover = typeof cover === "string" ? cover.trim() : "";
   if (!normalizedCover || LEGACY_EMPTY_COVERS.has(normalizedCover)) {
     return pickFallbackCover(seed);
