@@ -7,6 +7,7 @@ const app = express();
 const ALLOWED_ORIGINS = [
   'https://pikachuprogrammer01.github.io',
   'https://myblog-api-five.vercel.app',
+  'https://pikachu01.me',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
