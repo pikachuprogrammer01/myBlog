@@ -36,7 +36,6 @@
           </template>
         </el-image>
       </div>
-      {{ resolvedCover }}
       <div class="content-wrapper">
         <h3 class="title">{{ article.title }}</h3>
         <p class="excerpt">{{ article.excerpt }}</p>
