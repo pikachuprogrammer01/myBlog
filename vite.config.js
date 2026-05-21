@@ -10,58 +10,58 @@ const root = process.cwd()
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, '')
   return {
-  plugins: [
-    vue(),
-    Components({
-      resolvers: [ElementPlusResolver({ importStyle: 'css' })],
-      dts: resolve(root, 'src/components.d.ts'),
-    }),
-  ],
-  base: env.VITE_BASE || '/',
-  resolve: {
-    alias: {
-      '@': resolve(root, './src'),
-    },
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'https://myblog-api-five.vercel.app',
-        changeOrigin: true,
+    plugins: [
+      vue(),
+      Components({
+        resolvers: [ElementPlusResolver({ importStyle: 'css' })],
+        dts: resolve(root, 'src/components.d.ts'),
+      }),
+    ],
+    base: env.VITE_BASE || '/',
+    resolve: {
+      alias: {
+        '@': resolve(root, './src'),
       },
     },
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: 'modern-compiler',
-      },
-    },
-  },
-  build: {
-    cssCodeSplit: true,
-    chunkSizeWarningLimit: 500,
-    rollupOptions: {
-      output: {
-        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
-        chunkFileNames: 'js/[name]-[hash].js',
-        entryFileNames: 'js/[name]-[hash].js',
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // ECharts 仅管理后台使用，独立拆包
-            if (id.includes('echarts') || id.includes('zrender')) {
-              return 'vendor-echarts'
-            }
-            // xlsx 仅管理后台导出使用，独立拆包
-            if (id.includes('xlsx') || id.includes('cfb') || id.includes('codepage') || id.includes('adler-32') || id.includes('crc-32') || id.includes('ssf') || id.includes('wmf') || id.includes('word')) {
-              return 'vendor-xlsx'
-            }
-            // Vue 生态 + Element Plus + 其他依赖统一拆包，长期缓存
-            return 'vendor'
-          }
+    server: {
+      proxy: {
+        '/api': {
+          target: 'https://pikachu01.me',
+          changeOrigin: true,
         },
+      },
+    },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: 'modern-compiler',
+        },
+      },
+    },
+    build: {
+      cssCodeSplit: true,
+      chunkSizeWarningLimit: 500,
+      rollupOptions: {
+        output: {
+          assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+          chunkFileNames: 'js/[name]-[hash].js',
+          entryFileNames: 'js/[name]-[hash].js',
+          manualChunks (id) {
+            if (id.includes('node_modules')) {
+              // ECharts 仅管理后台使用，独立拆包
+              if (id.includes('echarts') || id.includes('zrender')) {
+                return 'vendor-echarts'
+              }
+              // xlsx 仅管理后台导出使用，独立拆包
+              if (id.includes('xlsx') || id.includes('cfb') || id.includes('codepage') || id.includes('adler-32') || id.includes('crc-32') || id.includes('ssf') || id.includes('wmf') || id.includes('word')) {
+                return 'vendor-xlsx'
+              }
+              // Vue 生态 + Element Plus + 其他依赖统一拆包，长期缓存
+              return 'vendor'
+            }
+          },
+        }
       }
     }
-  }
   }
 })

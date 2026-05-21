@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { signToken, requireAuthMw } = require('../middleware/auth');
+const { signToken, requireAuthMw, verifyTokenRelaxed } = require('../middleware/auth');
 const pool = require('../db');
 const { isConfigured: isOssConfigured, uploadImage } = require('../utils/oss');
 
@@ -90,6 +90,39 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('登录失败:', error);
     return res.status(500).json({ success: false, message: '登录失败，请稍后重试' });
+  }
+});
+
+// POST /refresh — 无感刷新 access token（接受过期令牌）
+router.post('/refresh', async (req, res) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: '未提供令牌' });
+  }
+
+  const token = header.slice(7);
+  let decoded;
+  try {
+    // 即使过期也接受，由前端 401 触发刷新
+    decoded = verifyTokenRelaxed(token);
+  } catch {
+    return res.status(401).json({ success: false, message: '令牌无效' });
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id FROM users WHERE id = ?',
+      [decoded.userId]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, message: '用户不存在' });
+    }
+
+    const newToken = signToken({ userId: decoded.userId });
+    return res.status(200).json({ success: true, data: { token: newToken } });
+  } catch (error) {
+    console.error('刷新令牌失败:', error);
+    return res.status(500).json({ success: false, message: '刷新令牌失败' });
   }
 });
 

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { STORAGE_KEYS } from '@/constants/storage-keys';
 import { getStorage, setStorage, removeStorage } from '@/utils/storage';
-import { login as loginApi, register as registerApi, getProfile, uploadAvatar, deleteAvatar } from '@/api/services/authService';
+import { login as loginApi, register as registerApi, getProfile, uploadAvatar, deleteAvatar, refreshToken as refreshTokenApi } from '@/api/services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
   const savedUser = getStorage(STORAGE_KEYS.CURRENT_USER);
@@ -84,6 +84,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function refreshToken() {
+    if (!token.value) return false;
+    try {
+      const res = await refreshTokenApi();
+      if (res.data.success) {
+        const newToken = res.data.data.token;
+        token.value = newToken;
+        setStorage(STORAGE_KEYS.AUTH_TOKEN, newToken);
+        return true;
+      }
+      clearSession();
+      return false;
+    } catch {
+      clearSession();
+      return false;
+    }
+  }
+
   function logout() {
     clearSession();
   }
@@ -132,6 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     restoreSession,
+    refreshToken,
     logout,
     updateAvatarUrl,
     removeAvatarUrl,

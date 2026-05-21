@@ -11,6 +11,10 @@ function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }
 
+function verifyTokenRelaxed(token) {
+  return jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+}
+
 // Express-style middleware: attaches user to req
 async function authMiddleware(req, res) {
   const header = req.headers.authorization;
@@ -130,4 +134,4 @@ async function optionalAuthMw(req, res, next) {
   return next();
 }
 
-module.exports = { signToken, verifyToken, authMiddleware, requireAuth, requireAdmin, requireAuthMw, requireAdminMw, optionalAuthMw };
+module.exports = { signToken, verifyToken, verifyTokenRelaxed, authMiddleware, requireAuth, requireAdmin, requireAuthMw, requireAdminMw, optionalAuthMw };

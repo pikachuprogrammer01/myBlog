@@ -19,3 +19,7 @@ export function uploadAvatar(imageBase64) {
 export function deleteAvatar() {
   return client.delete('/api/auth/avatar');
 }
+
+export function refreshToken() {
+  return client.post('/api/auth/refresh');
+}
