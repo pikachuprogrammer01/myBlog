@@ -40,6 +40,7 @@
 | `login(username, password)` | 登录，成功后持久化 token 和 user 到 localStorage |
 | `register(username, password)` | 注册，自动登录并持久化 |
 | `restoreSession()` | 用已存储的 token 向 API 验证有效性，恢复登录态 |
+| `refreshToken()` | 无感刷新 JWT Token，成功返回 true，失败清空 session |
 | `logout()` | 清除 token 和 user |
 | `updateAvatarUrl(imageBase64)` | 上传头像并更新本地状态 |
 | `removeAvatarUrl()` | 删除头像并更新本地状态 |

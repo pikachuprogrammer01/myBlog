@@ -117,8 +117,8 @@ router.beforeEach(async (to, from) => {
 
 - `baseURL` 从环境变量 `VITE_API_BASE` 读取
 - 请求拦截器：自动附加 `Authorization: Bearer <token>`
-- 响应拦截器：401 时清除本地会话并跳转到登录页
-- 开发环境通过 Vite proxy 代理到 Vercel API
+- 响应拦截器：401 时自动尝试无感刷新 Token，成功则重试请求，失败才跳转登录页
+- 开发环境通过 Vite proxy 代理 `/api/*` 到后端 API
 
 ### Service 层
 

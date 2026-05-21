@@ -14,7 +14,7 @@ services/          ← 各模块 API 函数（auth/article/comment/admin...）
 client.js          ← Axios 实例（baseURL、拦截器、错误处理）
      │
      ▼
-Backend API        ← https://myblog-api-five.vercel.app/api/*
+Backend API        ← https://pikachu01.me/api/*
 ```
 
 ## Axios 客户端 (`api/client.js`)
@@ -22,7 +22,7 @@ Backend API        ← https://myblog-api-five.vercel.app/api/*
 ### 配置
 
 - `baseURL` 从环境变量 `VITE_API_BASE` 读取
-- 默认超时 15 秒
+- 默认超时 10 秒
 - 开发环境通过 Vite proxy 代理 `/api/*` 到 Vercel
 
 ### 请求拦截器
@@ -36,7 +36,9 @@ config.headers.Authorization = `Bearer ${token}`
 ### 响应拦截器
 
 - 正常响应：直接返回 `response`
-- 401 状态码：清除本地会话 → 跳转到 `/login`
+- 401 状态码：自动调用 `/api/auth/refresh` 刷新 Token → 重试原请求
+  - 多个并发 401 排队共享一次刷新
+  - 刷新失败才清除本地会话 → 跳转 `/login`
 
 ## Service 模块
 
@@ -51,6 +53,7 @@ config.headers.Authorization = `Bearer ${token}`
 | `getProfile()` | GET | `/api/auth/profile` | 获取当前用户信息 |
 | `uploadAvatar(base64)` | POST | `/api/auth/avatar` | 上传头像 |
 | `deleteAvatar()` | DELETE | `/api/auth/avatar` | 删除头像 |
+| `refreshToken()` | POST | `/api/auth/refresh` | 刷新 JWT Token |
 
 ### articleService.js
 
@@ -91,6 +94,7 @@ config.headers.Authorization = `Bearer ${token}`
 | `contactService` | `contactService.js` | 联系表单提交与消息管理 |
 | `interviewService` | `interviewService.js` | 面试题库公开 API |
 | `projectService` | `projectService.js` | 项目展示公开 API |
+| `ragService` | `ragService.js` | RAG AI 问答（语义搜索 + LLM） |
 
 ## 新增 Service 指南
 
